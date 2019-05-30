@@ -64,7 +64,7 @@ def draw_class_relationship(dict_class_parent, list_class_def, dict_class_import
         fo.close()
 
 
-def scan_class_define(root_dir, mode):
+def scan_class_define(root_dir, mode, excluded_class):
     dict_filename_classname = {}
     dict_class_parent = {}
     list_class_def = []
@@ -93,7 +93,9 @@ def scan_class_define(root_dir, mode):
                                 parentname = parentname[:parentname.index(r'{')]
                             except:
                                 pass
-                            if len(classname) > 0 and len(parentname) > 0:
+                            if len(classname) > 0 and len(parentname) > 0 \
+                                    and classname not in excluded_class \
+                                    and parentname not in excluded_class:
                                 dict_class_parent[classname] = parentname
                                 dict_filename_classname[filename] = classname
                         except:
@@ -105,8 +107,9 @@ def scan_class_define(root_dir, mode):
                             classname = classname[:classname.index(r' ')]
                         except:
                             pass
-                        list_class_def.append(classname)
-                        dict_filename_classname[filename] = classname
+                        if classname not in excluded_class:
+                            list_class_def.append(classname)
+                            dict_filename_classname[filename] = classname
                         break
                 f.close()
     if len(list_class_def) > 0 and mode.find('r') >= 0:
@@ -130,8 +133,8 @@ def scan_class_define(root_dir, mode):
     draw_class_relationship(dict_class_parent, list_class_def, dict_class_importedclass)
 
 
-def main(root_dir, mode):
-    scan_class_define(root_dir, mode)
+def main(root_dir, mode, excluded_class):
+    scan_class_define(root_dir, mode, excluded_class)
 
 
 if __name__ == '__main__':
@@ -141,6 +144,7 @@ if __name__ == '__main__':
                 #   - 'c' : class, forced, cannot disable
                 #   - 'i' : interface
                 #   - 'r' : rely
+    excluded_class = []
     if len(sys.argv) > 1:
         for i in range(1, len(sys.argv)):
             argv = sys.argv[i].strip()
@@ -154,6 +158,12 @@ if __name__ == '__main__':
                     mode = sys.argv[i + 1]
                 except:
                     pass
+            elif argv == '-e': # exclued class, split with ','
+                try:
+                    excluded_class = sys.argv[i + 1].split(',')
+                    print(excluded_class)
+                except:
+                    pass
     else:
         # test only
         #main('/Users/lego/workspace/omadm') # scanning in current directory
@@ -161,7 +171,7 @@ if __name__ == '__main__':
         #main('/Users/lego/aosp/packages/apps/Settings/src')
 
     if root_dir is not None:
-        main(root_dir, mode)
+        main(root_dir, mode, excluded_class)
     else:
         print('pls assign root dir to scan with -p')
     exit(0)
