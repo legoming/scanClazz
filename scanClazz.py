@@ -3,7 +3,6 @@
 import os
 import sys
 import re
-from typing import Set
 
 KEYWORD_PUBLIC = r"public"
 KEYWORD_ABSTRACT = r"(abstract\ +)?"
@@ -60,7 +59,7 @@ def draw_class_relationship(dict_class_parent, list_class_def, dict_class_import
         fo.close()
 
 
-def scan_class_define(root_dir):
+def scan_class_define(root_dir, mode):
     dict_filename_classname = {}
     dict_class_parent = {}
     list_class_def = []
@@ -105,35 +104,59 @@ def scan_class_define(root_dir):
                         dict_filename_classname[filename] = classname
                         break
                 f.close()
-    for root, subdirs, files in os.walk(root_dir):
-        for filename in files:
-            if filename.find('.java') > 0:
-                filepath = os.path.join(root, filename)
-                f = open(filepath, 'r')
+    if len(list_class_def) > 0 and mode.find('r') >= 0:
+        for root, subdirs, files in os.walk(root_dir):
+            for filename in files:
+                if filename.find('.java') > 0:
+                    filepath = os.path.join(root, filename)
+                    print(filename + ' : ' + filepath)
+                    f = open(filepath, 'r')
+                    buff = f.read()
+                    f.close()
+                    set_importedclass = set()
 
-                set_importedclass: Set[str] = set()
-
-                for line in f:
                     for clz in list_class_def:
                         pat = r"\ " + clz + r"\.|new\ " + clz
                         # \ Intent\.|new Intent
-                        if re.search(pat, line):
+                        if re.search(pat, buff):
                             set_importedclass.add(clz)
-                dict_class_importedclass[dict_filename_classname.get(filename)] = set_importedclass
-                f.close()
+                    dict_class_importedclass[dict_filename_classname.get(filename)] = set_importedclass
     #print(dict_class_importedclass)
     draw_class_relationship(dict_class_parent, list_class_def, dict_class_importedclass)
 
 
-def main(root_dir):
-    scan_class_define(root_dir)
+def main(root_dir, mode):
+    scan_class_define(root_dir, mode)
 
 
 if __name__ == '__main__':
-    print('\n' + PATTERN_CLASS_WITH_PARENT + '\n'*3)
+    root_dir = None
+    mode = 'ci' # class inherit + interface implement
+                # possible value : mix of below values
+                #   - 'c' : class, forced, cannot disable
+                #   - 'i' : interface
+                #   - 'r' : rely
     if len(sys.argv) > 1:
-        main(sys.argv[1])
+        for i in range(1, len(sys.argv)):
+            argv = sys.argv[i].strip()
+            if argv == '-p':
+                try:
+                    root_dir = sys.argv[i + 1]
+                except:
+                    break
+            elif argv == '-m':
+                try:
+                    mode = sys.argv[i + 1]
+                except:
+                    pass
     else:
+        # test only
         #main('/Users/lego/workspace/omadm') # scanning in current directory
-        #main('/Users/lego/workspace/OTAProvisioningClient')
-        main('/Users/lego/aosp/packages/apps/Settings/src')
+        root_dir = '/Users/lego/workspace/OTAProvisioningClient'
+        #main('/Users/lego/aosp/packages/apps/Settings/src')
+
+    if root_dir is not None:
+        main(root_dir, mode)
+    else:
+        print('pls assign root dir to scan with -p')
+    exit(0)
