@@ -37,23 +37,28 @@ def draw_class_relationship(dict_class_parent, list_class_def, dict_class_import
         fo = open('output', 'w')
         #fo.write('```graphviz')
         fo.write('\ndigraph G {')
-        for cls in dict_class_parent:
-            cls = cls.replace('.', '・').replace('<', '‹').replace('>', '›')
-            pnt = dict_class_parent[cls].replace('.', '・').replace('<', '‹').replace('>', '›')
-            fo.write('\n    ' + cls + '[shape = note]')
-            fo.write('\n    ' + pnt + '[shape = component]')
-            fo.write('\n    ' + cls + ' -> ' + pnt + '[arrowhead = empty]')
-            fo.write('\n')
-        for cls in list_class_def:
-            fo.write('\n    ' + cls + '[shape = note]')
-        for cls in dict_class_importedclass:
+        if dict_class_parent is not None and len(dict_class_parent) > 0:
+            for cls in dict_class_parent:
+                if cls is not None and dict_class_parent[cls] is not None:
+                    cls = cls.replace('.', '・').replace('<', '‹').replace('>', '›')
+                    pnt = dict_class_parent[cls].replace('.', '・').replace('<', '‹').replace('>', '›')
+                    fo.write('\n    ' + cls + '[shape = note]')
+                    fo.write('\n    ' + pnt + '[shape = component]')
+                    fo.write('\n    ' + cls + ' -> ' + pnt + '[arrowhead = empty]')
+                    fo.write('\n')
+        if list_class_def is not None and len(list_class_def) > 0:
             if cls is not None:
-                cls_converted = cls.replace('.', '・').replace('<', '‹').replace('>', '›')
-                if dict_class_importedclass is not None:
-                    for relatedcls in dict_class_importedclass.get(cls):
-                        if relatedcls != cls:
-                            relatedcls_converted = relatedcls.replace('.', '・').replace('<', '‹').replace('>', '›')
-                            fo.write('\n    ' + cls_converted + ' -> ' + relatedcls_converted + '[style = dashed]')
+                for cls in list_class_def:
+                    fo.write('\n    ' + cls + '[shape = note]')
+        if dict_class_importedclass is not None and len(dict_class_importedclass) > 0:
+            for cls in dict_class_importedclass:
+                if cls is not None:
+                    cls_converted = cls.replace('.', '・').replace('<', '‹').replace('>', '›')
+                    if dict_class_importedclass is not None:
+                        for relatedcls in dict_class_importedclass.get(cls):
+                            if relatedcls != cls:
+                                relatedcls_converted = relatedcls.replace('.', '・').replace('<', '‹').replace('>', '›')
+                                fo.write('\n    ' + cls_converted + ' -> ' + relatedcls_converted + '[style = dashed]')
         fo.write('\n}')
         #fo.write('\n```')
         fo.close()
