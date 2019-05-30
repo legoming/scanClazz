@@ -32,7 +32,8 @@ def __init__():
     pass
 
 
-def draw_class_relationship(dict_class_parent, list_class_def, dict_class_importedclass):
+def draw_class_relationship(dict_class_parent, list_class_def, dict_class_reliedclass, set_class_not_standalone):
+    set_defined_classes = set()
     if len(dict_class_parent) > 0:
         fo = open('output', 'w')
         #fo.write('```graphviz')
@@ -40,22 +41,31 @@ def draw_class_relationship(dict_class_parent, list_class_def, dict_class_import
         if dict_class_parent is not None and len(dict_class_parent) > 0:
             for cls in dict_class_parent:
                 if cls is not None and dict_class_parent[cls] is not None:
-                    cls = cls.replace('.', '・').replace('<', '‹').replace('>', '›')
-                    pnt = dict_class_parent[cls].replace('.', '・').replace('<', '‹').replace('>', '›')
-                    fo.write('\n    ' + cls + '[shape = note]')
-                    fo.write('\n    ' + pnt + '[shape = component]')
-                    fo.write('\n    ' + cls + ' -> ' + pnt + '[arrowhead = empty]')
+                    cls_converted = cls.replace('.', '・').replace('<', '‹').replace('>', '›')
+                    pnt_converted = dict_class_parent[cls].replace('.', '・').replace('<', '‹').replace('>', '›')
+                    if cls not in set_defined_classes:
+                        fo.write('\n    ' + cls_converted + '[shape = note]')
+                        set_defined_classes.add(cls)
+                    if dict_class_parent[cls] not in set_defined_classes:
+                        fo.write('\n    ' + pnt_converted + '[shape = component]')
+                        set_defined_classes.add(dict_class_parent[cls])
+                    fo.write('\n    ' + cls_converted + ' -> ' + pnt_converted + '[arrowhead = empty color=purple]')
                     fo.write('\n')
         if list_class_def is not None and len(list_class_def) > 0:
             if cls is not None:
                 for cls in list_class_def:
-                    fo.write('\n    ' + cls + '[shape = note]')
-        if dict_class_importedclass is not None and len(dict_class_importedclass) > 0:
-            for cls in dict_class_importedclass:
+                    if cls not in set_defined_classes and cls in set_class_not_standalone:
+                        cls_converted = cls.replace('.', '・').replace('<', '‹').replace('>', '›')
+                        fo.write('\n    ' + cls_converted + '[shape = note]')
+                        set_defined_classes.add(cls)
+                    elif cls not in set_class_not_standalone:
+                        print(cls + ' is standalone' )
+        if dict_class_reliedclass is not None and len(dict_class_reliedclass) > 0:
+            for cls in dict_class_reliedclass:
                 if cls is not None:
                     cls_converted = cls.replace('.', '・').replace('<', '‹').replace('>', '›')
-                    if dict_class_importedclass is not None:
-                        for relatedcls in dict_class_importedclass.get(cls):
+                    if dict_class_reliedclass is not None:
+                        for relatedcls in dict_class_reliedclass.get(cls):
                             if relatedcls != cls:
                                 relatedcls_converted = relatedcls.replace('.', '・').replace('<', '‹').replace('>', '›')
                                 fo.write('\n    ' + cls_converted + ' -> ' + relatedcls_converted + '[style = dashed]')
@@ -68,7 +78,8 @@ def scan_class_define(root_dir, mode, excluded_class):
     dict_filename_classname = {}
     dict_class_parent = {}
     list_class_def = []
-    dict_class_importedclass = {}
+    dict_class_reliedclass = {}
+    set_class_not_standalone = set()
     for root, subdirs, files in os.walk(root_dir):
         for filename in files:
             if filename.find('.java') > 0:
@@ -98,6 +109,8 @@ def scan_class_define(root_dir, mode, excluded_class):
                                     and parentname not in excluded_class:
                                 dict_class_parent[classname] = parentname
                                 dict_filename_classname[filename] = classname
+                                set_class_not_standalone.add(classname)
+                                set_class_not_standalone.add(parentname)
                         except:
                             pass
                         break
@@ -128,9 +141,12 @@ def scan_class_define(root_dir, mode, excluded_class):
                         # \ Intent\.|new Intent
                         if re.search(pat, buff):
                             set_importedclass.add(clz)
-                    dict_class_importedclass[dict_filename_classname.get(filename)] = set_importedclass
-    #print(dict_class_importedclass)
-    draw_class_relationship(dict_class_parent, list_class_def, dict_class_importedclass)
+                            set_class_not_standalone.add(clz)
+                    dict_class_reliedclass[dict_filename_classname.get(filename)] = set_importedclass
+                    if len(set_importedclass) > 0:
+                        set_class_not_standalone.add(dict_filename_classname.get(filename))
+    #print(dict_class_reliedclass)
+    draw_class_relationship(dict_class_parent, list_class_def, dict_class_reliedclass, set_class_not_standalone)
 
 
 def main(root_dir, mode, excluded_class):
