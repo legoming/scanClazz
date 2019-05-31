@@ -25,7 +25,7 @@ python scan_clazz.py -p /Users/lego/aosp/packages/apps/Calendar/ -e Button,View,
 
 ### output
 
-file `output` will be generated
+file `output` will be generated under `dir_to_scan`
 
 ## draw relationship with graphviz
 
