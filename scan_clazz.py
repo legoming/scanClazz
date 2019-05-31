@@ -208,6 +208,23 @@ def main(root_dir, mode, excluded_class, key_class):
     scan_class_define(root_dir, mode, excluded_class, key_class)
 
 
+def print_help():
+    print('''
+Usage: python scan_clazz.py -p dir_to_scan [options]
+
+    Options:
+    -m mode
+            mode can be 'c' 'i' 'r', or combine
+            'c' - parsing class and inherit
+            'i' - parsing interface and implement (NOT supported)
+            'r' - parsing relationship between classes (used by)
+    -e class[,class2,class3,...,classn]
+            exclude classes in parsing result
+    -k class
+            assign the key class which will be emphasized in output
+    ''')
+
+
 if __name__ == '__main__':
     root_dir = None
     mode = 'ci' # class inherit + interface implement
@@ -220,7 +237,9 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         for i in range(1, len(sys.argv)):
             argv = sys.argv[i].strip()
-            if argv == '-p':
+            if argv == '-h':
+                print_help()
+            elif argv == '-p':
                 try:
                     root_dir = sys.argv[i + 1]
                 except:
@@ -245,8 +264,10 @@ if __name__ == '__main__':
     else:
         # test only
         #main('/Users/lego/workspace/omadm') # scanning in current directory
-        root_dir = '/Users/lego/workspace/OTAProvisioningClient'
+        #root_dir = '/Users/lego/workspace/OTAProvisioningClient'
         #main('/Users/lego/aosp/packages/apps/Settings/src')
+        print_help()
+        exit(0)
 
     if root_dir is not None:
         main(root_dir, mode, excluded_class, key_class)
