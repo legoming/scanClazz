@@ -90,7 +90,6 @@ def scan_class_define(root_dir, mode, excluded_class, key_class):
     dict_class_parent = {}
     list_class_def = []
     dict_class_reliedclass = {}
-    set_class_not_standalone = set()
 
     dict_classname_treenode = {}
     for root, subdirs, files in os.walk(root_dir):
@@ -123,16 +122,14 @@ def scan_class_define(root_dir, mode, excluded_class, key_class):
                                     dict_classname_treenode[classname] = nd
                             else:
                                 should_link = False
-                            if len(parentname) > 0 and parentname not in excluded_class:
+                            if mode.find('c') >= 0 and len(parentname) > 0 and parentname not in excluded_class:
                                 if parentname not in dict_classname_treenode.keys():
                                     nd = TreeNode(parentname)
                                     dict_classname_treenode[parentname] = nd
                             else:
                                 should_link = False
-                            if should_link and mode.find('c'):
+                            if should_link:
                                 dict_class_parent[classname] = parentname
-                                set_class_not_standalone.add(classname)
-                                set_class_not_standalone.add(parentname)
 
                                 dict_classname_treenode.get(classname).add_parent(parentname)
                                 dict_classname_treenode.get(parentname).add_child(classname)
@@ -187,7 +184,6 @@ def scan_class_define(root_dir, mode, excluded_class, key_class):
                         # \ Intent\.|new Intent
                         if re.search(pat, buff):
                             set_reliedclass.add(clz)
-                            set_class_not_standalone.add(clz)
                             # clz's node has created already
                             nd_clz = dict_classname_treenode.get(clz)
                             print('\t find relied class ' + nd_clz.name)
@@ -196,9 +192,6 @@ def scan_class_define(root_dir, mode, excluded_class, key_class):
                     dict_class_reliedclass[fclass] = set_reliedclass
                     if len(set_reliedclass) < 1:
                         print('\t no relied class')
-
-                    if len(set_reliedclass) > 0:
-                        set_class_not_standalone.add(fclass)
 
     #print(dict_class_reliedclass)
     draw_class_relationship(dict_class_parent, dict_class_reliedclass, dict_classname_treenode, key_class)
@@ -267,10 +260,10 @@ if __name__ == '__main__':
         #root_dir = '/Users/lego/workspace/OTAProvisioningClient'
         #main('/Users/lego/aosp/packages/apps/Settings/src')
         print_help()
-        exit(0)
+        os._exit(0)
 
     if root_dir is not None:
         main(root_dir, mode, excluded_class, key_class)
     else:
         print('pls assign root dir to scan with -p')
-    exit(0)
+    os._exit(0)
