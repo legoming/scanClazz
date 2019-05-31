@@ -129,7 +129,7 @@ def scan_class_define(root_dir, mode, excluded_class, key_class):
                                     dict_classname_treenode[parentname] = nd
                             else:
                                 should_link = False
-                            if should_link:
+                            if should_link and mode.find('c'):
                                 dict_class_parent[classname] = parentname
                                 set_class_not_standalone.add(classname)
                                 set_class_not_standalone.add(parentname)
@@ -212,7 +212,7 @@ if __name__ == '__main__':
     root_dir = None
     mode = 'ci' # class inherit + interface implement
                 # possible value : mix of below values
-                #   - 'c' : class, forced, cannot disable
+                #   - 'c' : class
                 #   - 'i' : interface
                 #   - 'r' : rely
     excluded_class = []
