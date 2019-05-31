@@ -180,7 +180,7 @@ def scan_class_define(root_dir, mode, excluded_class, key_class):
                     nd_fclass = dict_classname_treenode.get(fclass)
 
                     for clz in dict_classname_treenode:
-                        pat = r"\ " + clz + r"\.|new\ " + clz + r"|\"[a-zA-Z\.]+" + clz + r"\""
+                        pat = r"\ " + clz + r"\.|new\ " + clz + r"|\"[a-zA-Z]+\." + clz + r"\""
                         #print(pat)
                         # \ Intent\.|new Intent
                         if re.search(pat, buff):
