@@ -74,8 +74,8 @@ def draw_class_relationship(root_dir, dict_class_parent, dict_class_reliedclass,
                             if relatedcls != cls:
                                 relatedcls_converted = dict_classname_treenode.get(relatedcls).displayname
                                 if haskey and \
-                                        (key_nd.is_clz_direct_relate_with_node(cls) or
-                                         key_nd.is_clz_direct_relate_with_node(relatedcls)):
+                                        (key_nd.is_equal(cls) or
+                                         key_nd.is_equal(relatedcls)):
                                     fo.write('\n    ' + cls_converted + ' -> ' + relatedcls_converted + '[style = dashed]')
                                 elif haskey:
                                     fo.write('\n    ' + cls_converted + ' -> ' + relatedcls_converted + '[style = dashed color = gray]')
