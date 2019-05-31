@@ -34,9 +34,10 @@ def __init__():
     pass
 
 
-def draw_class_relationship(dict_class_parent, dict_class_reliedclass, dict_classname_treenode, key_class):
+def draw_class_relationship(root_dir, dict_class_parent, dict_class_reliedclass, dict_classname_treenode, key_class):
     if dict_classname_treenode is not None and len(dict_classname_treenode) >0:
-        fo = open('output', 'w')
+        fo = open(os.path.join(root_dir, 'output'), 'w')
+        fo.write('# ' + ' '.join(sys.argv))
         #fo.write('```graphviz')
         fo.write('\ndigraph G {')
         #fo.write('\nrankdir = LR')
@@ -194,7 +195,7 @@ def scan_class_define(root_dir, mode, excluded_class, key_class):
                         print('\t no relied class')
 
     #print(dict_class_reliedclass)
-    draw_class_relationship(dict_class_parent, dict_class_reliedclass, dict_classname_treenode, key_class)
+    draw_class_relationship(root_dir, dict_class_parent, dict_class_reliedclass, dict_classname_treenode, key_class)
 
 
 def main(root_dir, mode, excluded_class, key_class):
