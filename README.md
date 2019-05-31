@@ -33,6 +33,6 @@ copy the output from last step, and draw with graphviz, you can use [Graphviz On
 
 ### drawed sample
 
-![](http://ww4.sinaimg.cn/large/006tNc79ly1g3ky5lbrdjj30u00uo1kx.jpg)
-
 ![](http://ww2.sinaimg.cn/large/006tNc79ly1g3kxv0u68uj31ir0u0wwv.jpg)
+
+![](https://raw.githubusercontent.com/legoming/scanClazz/master/sample/graphviz-fdp.png)
