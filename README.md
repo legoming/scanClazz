@@ -36,8 +36,34 @@ file `output` will be generated under `dir_to_scan`
 
 copy the output from last step, and draw with graphviz, you can use [Graphviz Online Editor](https://edotor.net)
 
-### drawed sample
+### drawed sample - aosp calendar with unlimited depth
+
+scan cmd
+
+```
+python scan_clazz.py -p /Users/lego/aosp/packages/apps/Calendar/ -e Button,View,Activity,Utils,Drawable,TestCase,Fragment,FrameLayout,ListFragment,ListView,ListActivity -m icr -k MonthByWeekFragment
+```
+
+**dot**
 
 ![](http://ww2.sinaimg.cn/large/006tNc79ly1g3kyi2unonj32770u0h96.jpg)
 
+**fdp**
+
 ![](http://ww4.sinaimg.cn/large/006tNc79ly1g3kyig69cjj30u00yk7wh.jpg)
+
+### drawed sample - aosp calendar with depth up to 3
+
+scan cmd
+
+```
+python scan_clazz.py -p /Users/lego/aosp/packages/apps/Calendar/ -e Button,View,Activity,Utils,Drawable,TestCase,Fragment,FrameLayout,ListFragment,ListView,ListActivity -m icr -k MonthByWeekFragment -d 3
+```
+
+**dot**
+
+![](http://ww1.sinaimg.cn/large/006tNc79ly1g3ly7525nyj311z0u0476.jpg)
+
+**fdp**
+
+![](http://ww1.sinaimg.cn/large/006tNc79ly1g3ly7iaikkj31cz0u0qbv.jpg)
