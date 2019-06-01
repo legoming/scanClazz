@@ -1,5 +1,13 @@
 # scanClazz
 
+<font color=darkgreen>
+NOTE:     
+    If local graphviz has installed, and script is launched with python3;     
+    Then graph png will be generated automatically with local installed graphviz dot/fdp engine.
+
+    The generated png will be under `~/Downloads/`, named as `graph-dot.png` and `graph-fdp.png`.
+</font>
+
 ## generate class relationship for graphviz
 
 ```
