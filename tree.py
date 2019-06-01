@@ -99,6 +99,29 @@ class TreeNode:
             or self.is_rely_on_node(clz_name) \
             or self.is_relied_by_node(clz_name) else False
 
+    def is_clz_relate_with_node_in_depth(self, clz_name, depth, dict_classname_treenode):
+        if depth == -1:
+            return True
+        elif depth == 0:
+            return False
+        else:
+            if self.is_equal(clz_name):
+                return True
+            else:
+                if len(self.lchild) > 0:
+                    for lc in self.lchild:
+                        if lc in dict_classname_treenode.keys():
+                            nd = dict_classname_treenode.get(lc)
+                            if nd.is_clz_relate_with_node_in_depth(clz_name, depth - 1, dict_classname_treenode):
+                                return True
+                if len(self.rchild) > 0:
+                    for rc in self.rchild:
+                        if rc in dict_classname_treenode.keys():
+                            nd = dict_classname_treenode.get(rc)
+                            if nd.is_clz_relate_with_node_in_depth(clz_name, depth - 1, dict_classname_treenode):
+                                return True
+        return False
+
 
 def dump(dict_classname_treenode):
     if dict_classname_treenode is not None and len(dict_classname_treenode) > 0:
