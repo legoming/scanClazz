@@ -15,6 +15,11 @@ Usage: python scan_clazz.py -p dir_to_scan [options]
             exclude classes in parsing result
     -k class
             assign the key class which will be emphasized in output
+    -d depth
+            take effect only if key class is assigned
+            valid depth must be a integer between [3-9], include 3 and 9
+            otherwise depth will be discarded
+            depth is calculated from key class, a class direct rely on / relied by key class has depth 1 
 ```
 
 ### sample
