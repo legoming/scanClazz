@@ -3,6 +3,7 @@
 import os
 import sys
 import re
+import subprocess
 
 from tree import TreeNode, dump, print_debug
 
@@ -34,6 +35,27 @@ CACHED_INFO = []
 
 def __init__():
     pass
+
+
+def do_real_draw_if_possible(input):
+    try:
+        dot_v = subprocess.getstatusoutput(r'export PATH=/usr/local/bin:$PATH;dot -V')
+        fdp_v = subprocess.getstatusoutput(r'export PATH=/usr/local/bin:$PATH;fdp -V')
+        dot_support = True if dot_v[0] == 0 and dot_v[1].find('graphviz') > 0 else False
+        fdp_support = True if fdp_v[0] == 0 and fdp_v[1].find('graphviz') > 0 else False
+
+        if dot_support or fdp_support:
+            print('\ntry to draw png with local installed graphviz')
+        outpath = os.path.join(os.path.expanduser("~"), 'Downloads')
+
+        if dot_support:
+            subprocess.getstatusoutput(r'export PATH=/usr/local/bin:$PATH;dot ' + input + ' -Gdpi=300 -T png -o ' + os.path.join(outpath, 'graph-dot.png'))
+            print('dot png: ' + outpath + '/graph-dot.png')
+        if fdp_support:
+            subprocess.getstatusoutput(r'export PATH=/usr/local/bin:$PATH;fdp ' + input + ' -Gdpi=300 -T png -o ' + os.path.join(outpath, 'graph-fdp.png'))
+            print('fdp png: ' + outpath + '/graph-fdp.png')
+    except Exception as e:
+        print('do_real_draw_if_possible get ' + str(e))
 
 
 def draw_class_relationship(root_dir, dict_class_parent, dict_class_reliedclass, dict_classname_treenode, key_class, depth):
@@ -118,6 +140,8 @@ def draw_class_relationship(root_dir, dict_class_parent, dict_class_reliedclass,
         fo.close()
     for ln in CACHED_INFO:
         print(ln)
+    print('\noutput: ' + root_dir + '/output')
+    do_real_draw_if_possible(os.path.join(root_dir, 'output'))
 
 
 def scan_class_define(root_dir, mode, excluded_class, key_class, depth):
