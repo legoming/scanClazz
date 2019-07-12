@@ -237,7 +237,7 @@ def scan_class_define(root_dir, mode, excluded_class, key_class, depth):
                                 dict_classname_treenode[classname] = nd
                         break
                 f.close()
-            elif filename.find('.h') > 0:
+            elif filename.endswith('.h') > 0:
                 filepath = os.path.join(root, filename)
                 f = open(filepath, 'r')
                 classname = ''
@@ -358,7 +358,7 @@ def scan_class_define(root_dir, mode, excluded_class, key_class, depth):
                     dict_class_reliedclass[fclass] = set_reliedclass
                     if len(set_reliedclass) < 1:
                         print('\t no relied class')
-                elif filename.find('.h') > 0:
+                elif filename.endswith('.h'):
                     filepath = os.path.join(root, filename)
                     print('parsing '+ filename + ' : ' + filepath)
                     f = open(filepath, 'r')
