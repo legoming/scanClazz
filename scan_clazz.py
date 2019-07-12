@@ -321,7 +321,7 @@ def scan_class_define(root_dir, mode, excluded_class, key_class, depth):
     for filename in dict_filename_classname__cpp:
         print(filename + ' : ' + dict_filename_classname__cpp[filename])
     print('=' * 20)
-    if len(dict_classname_treenode) > 0 and mode.find('r') >= 0:
+    if (len(dict_classname_treenode) > 0 or len(dict_classname_treenode__cpp) > 0) and mode.find('r') >= 0:
         for root, subdirs, files in os.walk(root_dir):
             print(files)
             for filename in files:
