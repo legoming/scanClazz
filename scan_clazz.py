@@ -176,9 +176,9 @@ def scan_class_define(root_dir, mode, excluded_class, key_class, depth):
     dict_classname_treenode = {}
     dict_classname_treenode__cpp = {}
     for root, subdirs, files in os.walk(root_dir):
-        print(files)
+        print('file tree \t' + str(files))
         for filename in files:
-            print(' scanning 1 stage : ' + filename)
+            print('scanning \t' + filename)
             if filename.find('.java') > 0:
                 filepath = os.path.join(root, filename)
                 f = open(filepath, 'r')
@@ -314,20 +314,21 @@ def scan_class_define(root_dir, mode, excluded_class, key_class, depth):
                                 dict_classname_treenode__cpp[classname] = nd
                         break
                 f.close()
-    print('='*20)
+    print('='*10 + '\tmapping of filename - classname begin\t' + '='*10)
+    print('-'*10 + '\tjava\t' + '-'*10)
     for filename in dict_filename_classname:
         print(filename + ' : ' + dict_filename_classname[filename])
-    print('-'*8 + 'c++' + '-'*8)
+    print('-'*10 + '\tc++\t' + '-'*10)
     for filename in dict_filename_classname__cpp:
         print(filename + ' : ' + dict_filename_classname__cpp[filename])
-    print('=' * 20)
+    print('='*10 + '\tmapping of filename - classname end\t' + '='*10)
     if (len(dict_classname_treenode) > 0 or len(dict_classname_treenode__cpp) > 0) and mode.find('r') >= 0:
         for root, subdirs, files in os.walk(root_dir):
-            print(files)
+            print('tree \t' + str(files))
             for filename in files:
                 if filename.find('.java') > 0:
                     filepath = os.path.join(root, filename)
-                    print('parsing '+ filename + ' : ' + filepath)
+                    print('parsing class relationship in \t' + filepath)
                     f = open(filepath, 'r')
                     buff = f.read()
                     f.close()
@@ -336,7 +337,7 @@ def scan_class_define(root_dir, mode, excluded_class, key_class, depth):
                     fclass = dict_filename_classname.get(filename)
 
                     if fclass is None:
-                        print('should not happen ' + filename)
+                        print('skip due to no class defined in ' + filename)
                         continue
 
                     if fclass not in dict_classname_treenode:
@@ -360,7 +361,7 @@ def scan_class_define(root_dir, mode, excluded_class, key_class, depth):
                         print('\t no relied class')
                 elif filename.endswith('.h'):
                     filepath = os.path.join(root, filename)
-                    print('parsing '+ filename + ' : ' + filepath)
+                    print('parsing class relationship in \t'+ filename + ' : ' + filepath)
                     f = open(filepath, 'r')
                     buff = f.read()
                     f.close()
@@ -369,7 +370,7 @@ def scan_class_define(root_dir, mode, excluded_class, key_class, depth):
                     fclass = dict_filename_classname__cpp.get(filename)
 
                     if fclass is None:
-                        print('should not happen ' + filename)
+                        print('skip due to no class defined in ' + filename)
                         continue
 
                     if fclass not in dict_classname_treenode__cpp:
