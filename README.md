@@ -5,7 +5,7 @@ NOTE:
     If local graphviz has installed, and script is launched with python3;     
     Then graph png will be generated automatically with local installed graphviz dot/fdp engine.
 
-    The generated png will be under `~/Downloads/`, named as `graph-dot.png` and `graph-fdp.png`.
+    The generated png will be under `~/Downloads/`, named as `[lang]graph-dot.png` and `[lang]graph-fdp.png`, [lang] can be 'java' or 'cpp'. 
 </font>
 
 ## generate class relationship for graphviz
