@@ -5,7 +5,7 @@ import sys
 import re
 import subprocess
 
-from tree import TreeNode, dump, print_debug
+from tree import TreeNode, dump, print_debug, debug
 
 KEYWORD_PUBLIC = r"public"
 KEYWORD_ABSTRACT = r"(abstract\ +)?"
@@ -74,6 +74,7 @@ def do_real_draw_if_possible(input, type):
             print('fdp png: ' + outpath + '/graph-fdp.png')
     except Exception as e:
         print('do_real_draw_if_possible get ' + str(e))
+    print('\n\n')
 
 
 def draw_class_relationship(root_dir, dict_class_parent, dict_class_reliedclass, dict_classname_treenode, key_class, depth, type):
@@ -106,6 +107,8 @@ def draw_class_relationship(root_dir, dict_class_parent, dict_class_reliedclass,
                     fo.write('\n    ' + nd.displayname + '[shape = plaintext]')
                 else:
                     fo.write('\n    ' + nd.displayname + '[shape = note]')
+            else:
+                print('invalid node found')
         if len(set_class_depth_exceeded) > 0:
             for c in set_class_depth_exceeded:
                 nc = dict_classname_treenode.get(c)
@@ -306,6 +309,10 @@ def scan_class_define(root_dir, mode, excluded_class, key_class, depth):
                             classname = classname[:classname.index(r' ')]
                         except Exception as e:
                             print('PATTERN_CLASS_DEFINE__CPP except\n\t' + str(e))
+                        try: # bug fix @ 190722
+                            classname = classname[:classname.index(r'{')]
+                        except Exception as e:
+                            print('PATTERN_CLASS_DEFINE__CPP except\n\t' + str(e))
                         if len(classname) > 0 and classname not in excluded_class:
                             list_class_def__cpp.append(classname)
                             dict_filename_classname__cpp[filename] = classname
@@ -378,14 +385,56 @@ def scan_class_define(root_dir, mode, excluded_class, key_class, depth):
                         dict_classname_treenode__cpp[fclass] = nd
                     nd_fclass = dict_classname_treenode__cpp.get(fclass)
 
+                    if dict_class_reliedclass__cpp.get(fclass) is not None:
+                        set_reliedclass = dict_class_reliedclass__cpp.get(fclass)
+
                     for clz in dict_classname_treenode__cpp:
-                        pat = r'\ *' + clz + r'(<\w+>)?' + r'\ *' + r'\*?' + r'\ *' + r'\w+' + r'\ *\w+\ *;'
+                        pat = r'\ *' + clz + r'(<\w+>)?' + r'\ *' + r'\*?' + r'\ *' + r'\w+' + r'\ *\w+\ *;' # member defined in header file
                         # \ Intent\.|new Intent
                         if re.search(pat, buff):
                             set_reliedclass.add(clz)
                             # clz's node has created already
                             nd_clz = dict_classname_treenode__cpp.get(clz)
-                            print('\t find relied class ' + nd_clz.name)
+                            print('\t find relied class (member ship) ' + nd_clz.name)
+                            nd_clz.add_lchild(fclass)
+                            nd_fclass.add_rchild(clz)
+                    dict_class_reliedclass__cpp[fclass] = set_reliedclass
+                    if len(set_reliedclass) < 1:
+                        print('\t no relied class')
+                elif filename.endswith('.cpp'):
+                    filepath = os.path.join(root, filename)
+                    print('parsing class relationship in \t'+ filename + ' : ' + filepath)
+                    f = open(filepath, 'r')
+                    buff = f.read()
+                    f.close()
+
+                    set_reliedclass = set()
+
+                    # [TODO] we simply suppose header file always has same file name with cpp
+                    fclass = dict_filename_classname__cpp.get(filename.replace(r'.cpp', r'.h'))
+
+                    if fclass is None:
+                        print('skip due to no class defined in ' + filename)
+                        continue
+                    else:
+                        print('\t checking class ' + fclass)
+
+                    if fclass not in dict_classname_treenode__cpp:
+                        nd = TreeNode(fclass)
+                        dict_classname_treenode__cpp[fclass] = nd
+                    nd_fclass = dict_classname_treenode__cpp.get(fclass)
+
+                    if dict_class_reliedclass__cpp.get(fclass) is not None:
+                        set_reliedclass = dict_class_reliedclass__cpp.get(fclass)
+
+                    for clz in dict_classname_treenode__cpp:
+                        pat = r'new\ +' + clz # new class instance in cpp
+                        # \ Intent\.|new Intent
+                        if re.search(pat, buff) and clz != fclass:
+                            set_reliedclass.add(clz)
+                            # clz's node has created already
+                            nd_clz = dict_classname_treenode__cpp.get(clz)
+                            print('\t find relied class (new instance) ' + nd_clz.name)
                             nd_clz.add_lchild(fclass)
                             nd_fclass.add_rchild(clz)
                     dict_class_reliedclass__cpp[fclass] = set_reliedclass
@@ -397,6 +446,11 @@ def scan_class_define(root_dir, mode, excluded_class, key_class, depth):
         draw_class_relationship(root_dir, dict_class_parent, dict_class_reliedclass, dict_classname_treenode, key_class, depth, "java")
     if len(dict_classname_treenode__cpp) > 0:
         draw_class_relationship(root_dir, dict_class_parent__cpp, dict_class_reliedclass__cpp, dict_classname_treenode__cpp, key_class, depth, "cpp")
+    if debug:
+        print('dump ===================================================')
+        dump(dict_classname_treenode)
+        print('dump ===================================================')
+        dump(dict_classname_treenode__cpp)
 
 
 def main(root_dir, mode, excluded_class, key_class, depth):
