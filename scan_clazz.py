@@ -417,13 +417,21 @@ def scan_class_define(root_dir, mode, excluded_class, key_class, depth):
                     f.close()
 
                     set_reliedclass = set()
+                    ismaincpp = False
 
                     # [TODO] we simply suppose header file always has same file name with cpp
                     fclass = dict_filename_classname__cpp.get(filename.replace(r'.cpp', r'.h'))
 
                     if fclass is None:
-                        print('skip due to no class defined in ' + filename)
-                        continue
+                        # check if it's the main entry cpp file
+                        #   - int main(
+                        pat = r'int\ +main\ *\('
+                        if re.search(pat, buff):
+                            ismaincpp = True
+                            fclass = filename
+                        else:
+                            print('skip due to no class defined in ' + filename)
+                            continue
                     else:
                         print('\t checking class ' + fclass)
 
@@ -436,7 +444,10 @@ def scan_class_define(root_dir, mode, excluded_class, key_class, depth):
                         set_reliedclass = dict_class_reliedclass__cpp.get(fclass)
 
                     for clz in dict_classname_treenode__cpp:
-                        pat = r'new\ +' + clz # new class instance in cpp
+                        pat = r'new\ +' + r'(\w*::)?' + clz # new class instance in cpp
+                                                            # only care about new instance, as invoke relation ship is to complex
+                        if ismaincpp:
+                            pat = pat + r'|' + clz + r'::' + r'|' + clz + r'\ +' + r'|' + r'<' + clz + r'>'
                         # \ Intent\.|new Intent
                         if re.search(pat, buff) and clz != fclass:
                             set_reliedclass.add(clz)
