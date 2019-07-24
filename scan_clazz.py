@@ -6,6 +6,7 @@ import re
 import subprocess
 
 from tree import TreeNode, dump, print_debug, debug
+from clz import ClzRelationShips
 
 KEYWORD_PUBLIC = r"public"
 KEYWORD_ABSTRACT = r"(abstract\ +)?"
@@ -55,7 +56,7 @@ def __init__():
     pass
 
 
-def do_real_draw_if_possible(input, type):
+def do_real_draw_if_possible(input, lang):
     try:
         dot_v = subprocess.getstatusoutput(r'export PATH=/usr/local/bin:$PATH;dot -V')
         fdp_v = subprocess.getstatusoutput(r'export PATH=/usr/local/bin:$PATH;fdp -V')
@@ -67,21 +68,28 @@ def do_real_draw_if_possible(input, type):
         outpath = os.path.join(os.path.expanduser("~"), 'Downloads')
 
         if dot_support:
-            subprocess.getstatusoutput(r'export PATH=/usr/local/bin:$PATH;dot ' + input + ' -Gdpi=300 -T png -o ' + os.path.join(outpath, type + 'graph-dot.png'))
+            subprocess.getstatusoutput(r'export PATH=/usr/local/bin:$PATH;dot ' + input + ' -Gdpi=300 -T png -o ' + os.path.join(outpath, lang + 'graph-dot.png'))
             print('dot png: ' + outpath + '/graph-dot.png')
         if fdp_support:
-            subprocess.getstatusoutput(r'export PATH=/usr/local/bin:$PATH;fdp ' + input + ' -Gdpi=300 -T png -o ' + os.path.join(outpath, type + 'graph-fdp.png'))
+            subprocess.getstatusoutput(r'export PATH=/usr/local/bin:$PATH;fdp ' + input + ' -Gdpi=300 -T png -o ' + os.path.join(outpath, lang + 'graph-fdp.png'))
             print('fdp png: ' + outpath + '/graph-fdp.png')
     except Exception as e:
         print('do_real_draw_if_possible get ' + str(e))
     print('\n\n')
 
 
-def draw_class_relationship(root_dir, dict_class_parent, dict_class_reliedclass, dict_classname_treenode, key_class, depth, type):
+def draw_class_relationship(mClzRelationShips):
+    root_dir = mClzRelationShips.get_var("root_dir")
+    dict_class_parent = mClzRelationShips.get_var("dict_class_parent")
+    dict_class_reliedclass = mClzRelationShips.get_var("dict_class_reliedclass")
+    dict_classname_treenode = mClzRelationShips.get_var("dict_classname_treenode")
+    key_class = mClzRelationShips.get_var("key_class")
+    depth = mClzRelationShips.get_var("depth")
+    lang = mClzRelationShips.get_var("lang")
     if dict_classname_treenode is not None and len(dict_classname_treenode) >0:
         set_class_depth_exceeded = set()
 
-        fo = open(os.path.join(root_dir, type + 'output'), 'w')
+        fo = open(os.path.join(root_dir, lang + 'output'), 'w')
         fo.write('# ' + ' '.join(sys.argv))
         #fo.write('```graphviz')
         fo.write('\ndigraph G {')
@@ -161,8 +169,8 @@ def draw_class_relationship(root_dir, dict_class_parent, dict_class_reliedclass,
         fo.close()
     for ln in CACHED_INFO:
         print(ln)
-    print('\noutput: ' + root_dir + '/' + type + 'output')
-    do_real_draw_if_possible(os.path.join(root_dir, type + 'output'), type)
+    print('\noutput: ' + root_dir + '/' + lang + 'output')
+    do_real_draw_if_possible(os.path.join(root_dir, lang + 'output'), lang)
 
 
 def scan_class_define(root_dir, mode, excluded_class, key_class, depth):
@@ -442,10 +450,22 @@ def scan_class_define(root_dir, mode, excluded_class, key_class, depth):
                         print('\t no relied class')
 
     #print(dict_class_reliedclass)
+    mClzRelationShips = ClzRelationShips()
+    mClzRelationShips.set_var("root_dir", root_dir)
+    mClzRelationShips.set_var("dict_class_parent", dict_class_parent)
+    mClzRelationShips.set_var("dict_class_reliedclass", dict_class_reliedclass)
+    mClzRelationShips.set_var("dict_classname_treenode", dict_classname_treenode)
+    mClzRelationShips.set_var("key_class", key_class)
+    mClzRelationShips.set_var("depth", depth)
+    mClzRelationShips.set_var("lang", "java")
     if len(dict_classname_treenode) > 0:
-        draw_class_relationship(root_dir, dict_class_parent, dict_class_reliedclass, dict_classname_treenode, key_class, depth, "java")
+        draw_class_relationship(mClzRelationShips)
     if len(dict_classname_treenode__cpp) > 0:
-        draw_class_relationship(root_dir, dict_class_parent__cpp, dict_class_reliedclass__cpp, dict_classname_treenode__cpp, key_class, depth, "cpp")
+        mClzRelationShips.set_var("dict_class_parent", dict_class_parent__cpp)
+        mClzRelationShips.set_var("dict_class_reliedclass", dict_class_reliedclass__cpp)
+        mClzRelationShips.set_var("dict_classname_treenode", dict_classname_treenode__cpp)
+        mClzRelationShips.set_var("lang", "cpp")
+        draw_class_relationship(mClzRelationShips)
     if debug:
         print('dump ===================================================')
         dump(dict_classname_treenode)
