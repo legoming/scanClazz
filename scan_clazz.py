@@ -195,8 +195,10 @@ def scan_class_define(root_dir, mode, excluded_class, key_class, depth):
                 f = open(filepath, 'r')
                 classname = ''
                 for line in f:
-                    if line.startswith('import') or line.startswith(r'/') or line.startswith(r'*'):
-                        pass
+                    if line.strip().startswith('import') or \
+                       line.strip().startswith(r'/') or \
+                       line.strip().startswith(r'*'):
+                        continue
                     elif re.match(PATTERN_CLASS_WITH_PARENT, line):
                         try:
                             classname = re.search(KEYWORD_CLASS + '(.*)' + KEYWORD_EXTEND, line).group(1).strip()
