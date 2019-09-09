@@ -27,6 +27,9 @@ class TreeNode:
     def is_parent(self):
         return True if len(self.childs) > 0 else False
 
+    def is_interface(self):
+        return True if len(self.implements) > 0 else False
+
     def is_leaf(self):
         return True if len(self.childs) < 1 else False
 
@@ -56,6 +59,8 @@ class TreeNode:
         if len(self.childs) > 0 \
                 or len(self.lchild) > 0 \
                 or len(self.rchild) > 0 \
+                or len(self.interfaces) > 0 \
+                or len(self.implements) > 0 \
                 or self.parent is not None:
             return False
         else:

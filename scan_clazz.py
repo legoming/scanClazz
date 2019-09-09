@@ -114,6 +114,9 @@ def draw_class_relationship(mClzRelationShips):
                 elif nd.is_parent():
                     print('parent node ' + nd.name)
                     fo.write('\n    ' + nd.displayname + '[shape = component]')
+                elif nd.is_interface():
+                    print('interface node ' + nd.name)
+                    fo.write('\n    ' + nd.displayname + '[shape = component]')
                 elif nd.is_leaf():
                     fo.write('\n    ' + nd.displayname + '[shape = plaintext]')
                 else:
