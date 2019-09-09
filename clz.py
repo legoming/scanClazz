@@ -3,6 +3,7 @@
 DicArgvTypes = {
         "root_dir" : "<class 'str'>", 
         "dict_class_parent" : "<class 'dict'>", 
+        "dict_class_interface" : "<class 'dict'>",
         "dict_class_reliedclass" : "<class 'dict'>", 
         "dict_classname_treenode" : "<class 'dict'>", 
         "key_class" : "<class 'str'>", 
@@ -20,13 +21,13 @@ class ClzRelationShips:
             self.argvs[arg_type] = arg_value
         else:
             print(str(type(arg_value)))
-            print('error: ' + arg_type + ' ' + str(arg_value) + ' is invalid')
+            print('ClzRelationShips error: ' + arg_type + ' ' + str(arg_value) + ' is invalid')
 
     def get_var(self, arg_type):
         if arg_type in DicArgvTypes.keys():
             return self.argvs.get(arg_type)
         else:
-            print('error: ' + arg_type + ' cannot be found in argvs')
+            print('ClzRelationShips error: ' + arg_type + ' cannot be found in argvs')
             return None
 
 

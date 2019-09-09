@@ -10,6 +10,8 @@ def print_debug(str):
 class TreeNode:
     def __init__(self, classname):
         self.parent = None # class name
+        self.interfaces = set() # parent interface of the implemented child class
+        self.implements = set() # implement child class of interface
         self.lchild = set() # set of class name, who relied on current class
         self.rchild = set() # set of class name, whom current class is relied on
         self.childs = set() # set of class name, who is inherited from current class
@@ -35,6 +37,12 @@ class TreeNode:
     def add_child(self, child_class_name):
         # sometimes we don't know it's left or right child
         self.childs.add(child_class_name)
+
+    def add_interface(self, parent_interface_name):
+        self.interfaces.add(parent_interface_name)
+    
+    def add_implement(self, child_implement_name):
+        self.implements.add(child_implement_name)
 
     def add_lchild(self, child_class_name):
         # classes relied on current class
