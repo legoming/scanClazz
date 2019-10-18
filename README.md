@@ -17,6 +17,12 @@ Usage: python scan_clazz.py -p dir_to_scan [options]
             'c' - parsing class and inherit
             'i' - parsing interface and implement (NOT supported)
             'r' - parsing relationship between classes (used by)
+    -ij class[,class2,class3,...,classn]
+            include additional java classes
+            for example, include additional framework calss when scanning packages app
+    -ic class[,class2,class3,...,classn]
+            include additional cpp classes
+            for example, include additional framework calss when scanning packages app
     -e class[,class2,class3,...,classn]
             exclude classes in parsing result
     -k class
