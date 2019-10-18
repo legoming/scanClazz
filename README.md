@@ -1,16 +1,14 @@
 # scanClazz
 
-<font color=darkgreen>
-NOTE:     
-    If local graphviz has installed, and script is launched with python3;     
-    Then graph png will be generated automatically with local installed graphviz dot/fdp engine.
+If local graphviz has installed, and script is launched with python3; then graph png will be generated automatically with local installed graphviz dot/fdp engine.
 
-    The generated png will be under `~/Downloads/`, named as `[lang]graph-dot.png` and `[lang]graph-fdp.png`, [lang] can be 'java' or 'cpp'. 
-</font>
+The generated png will be under `~/Downloads/`, named as `[lang]graph-dot.png` and `[lang]graph-fdp.png`, [lang] can be 'java' or 'cpp'. 
 
 ## generate class relationship for graphviz
 
 ```
+v1.0
+
 Usage: python scan_clazz.py -p dir_to_scan [options]
 
     Options:
@@ -28,6 +26,9 @@ Usage: python scan_clazz.py -p dir_to_scan [options]
             valid depth must be a integer between [3-9], include 3 and 9
             otherwise depth will be discarded
             depth is calculated from key class, a class direct rely on / relied by key class has depth 1 
+
+Feature Support:
+    support multiple -p in 1.0+
 ```
 
 ### sample
@@ -39,6 +40,8 @@ python scan_clazz.py -p /Users/lego/aosp/packages/apps/Calendar/ -e Button,View,
 ### output
 
 file `output` will be generated under `dir_to_scan`
+
+> the dir assigned by 1st `-p` will be used if multiple projects are assigned
 
 ## draw relationship with graphviz
 
