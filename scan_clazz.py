@@ -49,6 +49,23 @@ PATTERN_CLASS_DEFINE__CPP = KEYWORD_CLASS + SPLIT_SPACE + \
 
 CLASS_EXCLUDED_ALWAYS = [
     r'ByteArray',
+    r'Activity',
+    r'Thread',
+    r'Application',
+    r'Item',
+    r'BaseActivity',
+    r'ListView',
+    r'Fragment',
+    r'Dialog',
+    r'DialogFragment',
+    r'Service',
+    r'BroadcastReceiver',
+    r'TextView',
+    r'LinearLayout',
+    r'Exception',
+    r'Executor',
+    r'AbstractCursor',
+    r'State',
 ]
 
 CACHED_INFO = []
@@ -189,7 +206,7 @@ def draw_class_relationship(mClzRelationShips):
     do_real_draw_if_possible(os.path.join(root_dir, lang + 'output'), lang)
 
 
-def scan_class_define(root_dir, mode, excluded_class, key_class, depth):
+def scan_class_define(sRootDir, mode, excluded_class, key_class, depth):
     dict_filename_classname = {}
     dict_class_parent = {}
     dict_class_interface = {}
@@ -203,191 +220,192 @@ def scan_class_define(root_dir, mode, excluded_class, key_class, depth):
 
     dict_classname_treenode = {}
     dict_classname_treenode__cpp = {}
-    for root, subdirs, files in os.walk(root_dir):
-        print('file tree \t' + str(files))
-        for filename in files:
-            print('scanning \t' + filename)
-            if filename.find('.java') > 0:
-                filepath = os.path.join(root, filename)
-                f = open(filepath, 'r')
-                classname = ''
-                for line in f:
-                    if line.strip().startswith('import') or \
-                       line.strip().startswith(r'/') or \
-                       line.strip().startswith(r'*'):
-                        continue
-                    elif re.match(PATTERN_CLASS_WITH_PARENT, line) or re.match(PATTERN_CLASS_IMPLEMENT_INTERFACE, line):
-                        if re.match(PATTERN_CLASS_WITH_PARENT, line):
-                            try:
-                                classname = re.search(KEYWORD_CLASS + '(.*)' + KEYWORD_EXTEND, line).group(1).strip()
-                                parentname = re.search(KEYWORD_EXTEND + '(.*)', line).group(1).lstrip()
+    for root_dir in sRootDir:
+        for root, subdirs, files in os.walk(root_dir):
+            print('file tree \t' + str(files))
+            for filename in files:
+                print('scanning \t' + filename)
+                if filename.find('.java') > 0:
+                    filepath = os.path.join(root, filename)
+                    f = open(filepath, 'r')
+                    classname = ''
+                    for line in f:
+                        if line.strip().startswith('import') or \
+                        line.strip().startswith(r'/') or \
+                        line.strip().startswith(r'*'):
+                            continue
+                        elif re.match(PATTERN_CLASS_WITH_PARENT, line) or re.match(PATTERN_CLASS_IMPLEMENT_INTERFACE, line):
+                            if re.match(PATTERN_CLASS_WITH_PARENT, line):
                                 try:
-                                    parentname = parentname[:parentname.index(r' ')]
-                                except:
-                                    pass
-                                try:
-                                    parentname = parentname[:parentname.index(r'{')]
-                                except:
-                                    pass
-                                should_link = True
-                                if len(classname) > 0 and classname not in excluded_class:
-                                    dict_filename_classname[filename] = classname
-                                    if classname not in dict_classname_treenode.keys():
-                                        nd = TreeNode(classname)
-                                        dict_classname_treenode[classname] = nd
-                                else:
-                                    should_link = False
-                                if mode.find('c') >= 0 and len(parentname) > 0 and parentname not in excluded_class:
-                                    if parentname not in dict_classname_treenode.keys():
-                                        nd = TreeNode(parentname)
-                                        dict_classname_treenode[parentname] = nd
-                                else:
-                                    should_link = False
-                                if should_link:
-                                    dict_class_parent[classname] = parentname
-
-                                    dict_classname_treenode.get(classname).add_parent(parentname)
-                                    dict_classname_treenode.get(parentname).add_child(classname)
-                                else:
-                                    CACHED_INFO.append('drop inherit relationship ' + classname + ' --▷ ' + parentname)
-
-                            except Exception as e:
-                                print('PATTERN_CLASS_WITH_PARENT except\n\t' + str(e))
-                        if re.match(PATTERN_CLASS_IMPLEMENT_INTERFACE, line):
-                            try:
-                                classname = re.search(KEYWORD_CLASS + '(.*)' + r' implements ', line).group(1).strip()
-                                if classname.find(r' extends ') > -1:
-                                    classname = classname[:classname.find(r' extends ')]
-                                interfaces = re.search('implements ' + '(.*)', line).group(1).strip()
-                                if interfaces.find(r' extends ') > -1:
-                                    interfaces = interfaces[:interfaces.find(r' extends ')]
-                                try:
-                                    interfaces = interfaces[:interfaces.index(r'{')]
-                                except:
-                                    pass
-                                classname = classname.strip()
-                                should_link = True
-                                if len(classname) > 0 and classname not in excluded_class:
-                                    dict_filename_classname[filename] = classname
-                                    if classname not in dict_classname_treenode.keys():
-                                        nd = TreeNode(classname)
-                                        dict_classname_treenode[classname] = nd
-                                else:
-                                    should_link = False
-                                
-                                for interface in interfaces.split(r','):
-                                    interface = interface.strip()
-                                    if mode.find('i') >= 0 and interface not in excluded_class:
-                                        if interface not in dict_classname_treenode.keys():
-                                            nd = TreeNode(interface)
-                                            dict_classname_treenode[interface] = nd
+                                    classname = re.search(KEYWORD_CLASS + '(.*)' + KEYWORD_EXTEND, line).group(1).strip()
+                                    parentname = re.search(KEYWORD_EXTEND + '(.*)', line).group(1).lstrip()
+                                    try:
+                                        parentname = parentname[:parentname.index(r' ')]
+                                    except:
+                                        pass
+                                    try:
+                                        parentname = parentname[:parentname.index(r'{')]
+                                    except:
+                                        pass
+                                    should_link = True
+                                    if len(classname) > 0 and classname not in excluded_class:
+                                        dict_filename_classname[filename] = classname
+                                        if classname not in dict_classname_treenode.keys():
+                                            nd = TreeNode(classname)
+                                            dict_classname_treenode[classname] = nd
+                                    else:
+                                        should_link = False
+                                    if mode.find('c') >= 0 and len(parentname) > 0 and parentname not in excluded_class:
+                                        if parentname not in dict_classname_treenode.keys():
+                                            nd = TreeNode(parentname)
+                                            dict_classname_treenode[parentname] = nd
                                     else:
                                         should_link = False
                                     if should_link:
-                                        dict_class_interface[classname] = interface
+                                        dict_class_parent[classname] = parentname
 
-                                        dict_classname_treenode.get(classname).add_interface(interface)
-                                        dict_classname_treenode.get(interface).add_implement(classname)
+                                        dict_classname_treenode.get(classname).add_parent(parentname)
+                                        dict_classname_treenode.get(parentname).add_child(classname)
                                     else:
-                                        CACHED_INFO.append('drop interface relationship ' + classname + ' --▷ ' + interface)
+                                        CACHED_INFO.append('drop inherit relationship ' + classname + ' --▷ ' + parentname)
+
+                                except Exception as e:
+                                    print('PATTERN_CLASS_WITH_PARENT except\n\t' + str(e))
+                            if re.match(PATTERN_CLASS_IMPLEMENT_INTERFACE, line):
+                                try:
+                                    classname = re.search(KEYWORD_CLASS + '(.*)' + r' implements ', line).group(1).strip()
+                                    if classname.find(r' extends ') > -1:
+                                        classname = classname[:classname.find(r' extends ')]
+                                    interfaces = re.search('implements ' + '(.*)', line).group(1).strip()
+                                    if interfaces.find(r' extends ') > -1:
+                                        interfaces = interfaces[:interfaces.find(r' extends ')]
+                                    try:
+                                        interfaces = interfaces[:interfaces.index(r'{')]
+                                    except:
+                                        pass
+                                    classname = classname.strip()
+                                    should_link = True
+                                    if len(classname) > 0 and classname not in excluded_class:
+                                        dict_filename_classname[filename] = classname
+                                        if classname not in dict_classname_treenode.keys():
+                                            nd = TreeNode(classname)
+                                            dict_classname_treenode[classname] = nd
+                                    else:
+                                        should_link = False
+                                    
+                                    for interface in interfaces.split(r','):
+                                        interface = interface.strip()
+                                        if mode.find('i') >= 0 and interface not in excluded_class:
+                                            if interface not in dict_classname_treenode.keys():
+                                                nd = TreeNode(interface)
+                                                dict_classname_treenode[interface] = nd
+                                        else:
+                                            should_link = False
+                                        if should_link:
+                                            dict_class_interface[classname] = interface
+
+                                            dict_classname_treenode.get(classname).add_interface(interface)
+                                            dict_classname_treenode.get(interface).add_implement(classname)
+                                        else:
+                                            CACHED_INFO.append('drop interface relationship ' + classname + ' --▷ ' + interface)
+                                except Exception as e:
+                                    print('PATTERN_CLASS_IMPLEMENT_INTERFACE except\n\t' + str(e))
+                            break
+                        elif re.match(PATTERN_CLASS_DEFINE, line):
+                            classname = re.search(KEYWORD_CLASS + '(.*)', line).group(1).strip()
+                            try:
+                                classname = classname[:classname.index(r' ')]
                             except Exception as e:
-                                print('PATTERN_CLASS_IMPLEMENT_INTERFACE except\n\t' + str(e))
-                        break
-                    elif re.match(PATTERN_CLASS_DEFINE, line):
-                        classname = re.search(KEYWORD_CLASS + '(.*)', line).group(1).strip()
-                        try:
-                            classname = classname[:classname.index(r' ')]
-                        except Exception as e:
-                            print('PATTERN_CLASS_DEFINE except\n\t' + str(e))
-                        if len(classname) > 0 and classname not in excluded_class:
-                            list_class_def.append(classname)
-                            dict_filename_classname[filename] = classname
-                            if classname not in dict_classname_treenode.keys():
-                                nd = TreeNode(classname)
-                                dict_classname_treenode[classname] = nd
-                        break
-                f.close()
-            elif filename.endswith('.h') > 0:
-                filepath = os.path.join(root, filename)
-                f = open(filepath, 'r')
-                classname = ''
-                for line in f:
-                    line = line.lstrip()
-                    if line.startswith('#') or line.startswith(r'/') or line.startswith(r'*'):
-                        pass
-                    elif re.match(PATTERN_CLASS_WITH_PARENT__CPP, line):
-                        try:
-                            classname = re.search(KEYWORD_CLASS + '(.*)' + KEYWORD_EXTEND__CPP, line).group(1).strip()
-                            parentname_multi = re.search(KEYWORD_EXTEND__CPP + '(.*)', line).group(1).lstrip()
-                            try:
-                                parentname_multi = parentname_multi[:parentname_multi.index(r'\n')]
-                            except:
-                                pass
-                            try:
-                                parentname_multi = parentname_multi[:parentname_multi.index(r'{')]
-                            except:
-                                pass
-                            try:
-                                parentname_multi = parentname_multi.replace(r'public ', r'')
-                            except:
-                                pass
-                            try:
-                                parentname_multi = parentname_multi.replace(r'protected ', r'')
-                            except:
-                                pass
-                            try:
-                                parentname_multi = parentname_multi.replace(r'private ', r'')
-                            except:
-                                pass
-                            should_link = True
+                                print('PATTERN_CLASS_DEFINE except\n\t' + str(e))
                             if len(classname) > 0 and classname not in excluded_class:
+                                list_class_def.append(classname)
+                                dict_filename_classname[filename] = classname
+                                if classname not in dict_classname_treenode.keys():
+                                    nd = TreeNode(classname)
+                                    dict_classname_treenode[classname] = nd
+                            break
+                    f.close()
+                elif filename.endswith('.h') > 0:
+                    filepath = os.path.join(root, filename)
+                    f = open(filepath, 'r')
+                    classname = ''
+                    for line in f:
+                        line = line.lstrip()
+                        if line.startswith('#') or line.startswith(r'/') or line.startswith(r'*'):
+                            pass
+                        elif re.match(PATTERN_CLASS_WITH_PARENT__CPP, line):
+                            try:
+                                classname = re.search(KEYWORD_CLASS + '(.*)' + KEYWORD_EXTEND__CPP, line).group(1).strip()
+                                parentname_multi = re.search(KEYWORD_EXTEND__CPP + '(.*)', line).group(1).lstrip()
+                                try:
+                                    parentname_multi = parentname_multi[:parentname_multi.index(r'\n')]
+                                except:
+                                    pass
+                                try:
+                                    parentname_multi = parentname_multi[:parentname_multi.index(r'{')]
+                                except:
+                                    pass
+                                try:
+                                    parentname_multi = parentname_multi.replace(r'public ', r'')
+                                except:
+                                    pass
+                                try:
+                                    parentname_multi = parentname_multi.replace(r'protected ', r'')
+                                except:
+                                    pass
+                                try:
+                                    parentname_multi = parentname_multi.replace(r'private ', r'')
+                                except:
+                                    pass
+                                should_link = True
+                                if len(classname) > 0 and classname not in excluded_class:
+                                    dict_filename_classname__cpp[filename] = classname
+                                    if classname not in dict_classname_treenode__cpp.keys():
+                                        nd = TreeNode(classname)
+                                        dict_classname_treenode__cpp[classname] = nd
+                                else:
+                                    should_link = False
+                                if should_link:
+                                    parentnames = parentname_multi.split(',')
+                                    for parentname in parentnames:
+                                        parentname = parentname.strip()
+                                        if mode.find('c') >= 0 and len(parentname) > 0 and parentname not in excluded_class:
+                                            if parentname not in dict_classname_treenode__cpp.keys():
+                                                nd = TreeNode(parentname)
+                                                dict_classname_treenode__cpp[parentname] = nd
+                                        else:
+                                            should_link = False
+                                        if should_link:
+                                            dict_class_parent__cpp[classname] = parentname
+
+                                            dict_classname_treenode__cpp.get(classname).add_parent(parentname)
+                                            dict_classname_treenode__cpp.get(parentname).add_child(classname)
+                                        else:
+                                            CACHED_INFO.append('drop inherit relationship [cpp] ' + classname + ' --▷ ' + parentname)
+                                else:
+                                    CACHED_INFO.append('drop inherit relationship [cpp] ' + classname + ' --▷ ' + parentname_multi)
+
+                            except Exception as e:
+                                print('PATTERN_CLASS_WITH_PARENT__CPP except\n\t' + str(e))
+                            break
+                        elif re.match(PATTERN_CLASS_DEFINE__CPP, line):
+                            classname = re.search(KEYWORD_CLASS + '(.*)', line).group(1).strip()
+                            try:
+                                classname = classname[:classname.index(r' ')]
+                            except Exception as e:
+                                print('PATTERN_CLASS_DEFINE__CPP except\n\t' + str(e))
+                            try: # bug fix @ 190722
+                                classname = classname[:classname.index(r'{')]
+                            except Exception as e:
+                                print('PATTERN_CLASS_DEFINE__CPP except\n\t' + str(e))
+                            if len(classname) > 0 and classname not in excluded_class:
+                                list_class_def__cpp.append(classname)
                                 dict_filename_classname__cpp[filename] = classname
                                 if classname not in dict_classname_treenode__cpp.keys():
                                     nd = TreeNode(classname)
                                     dict_classname_treenode__cpp[classname] = nd
-                            else:
-                                should_link = False
-                            if should_link:
-                                parentnames = parentname_multi.split(',')
-                                for parentname in parentnames:
-                                    parentname = parentname.strip()
-                                    if mode.find('c') >= 0 and len(parentname) > 0 and parentname not in excluded_class:
-                                        if parentname not in dict_classname_treenode__cpp.keys():
-                                            nd = TreeNode(parentname)
-                                            dict_classname_treenode__cpp[parentname] = nd
-                                    else:
-                                        should_link = False
-                                    if should_link:
-                                        dict_class_parent__cpp[classname] = parentname
-
-                                        dict_classname_treenode__cpp.get(classname).add_parent(parentname)
-                                        dict_classname_treenode__cpp.get(parentname).add_child(classname)
-                                    else:
-                                        CACHED_INFO.append('drop inherit relationship [cpp] ' + classname + ' --▷ ' + parentname)
-                            else:
-                                CACHED_INFO.append('drop inherit relationship [cpp] ' + classname + ' --▷ ' + parentname_multi)
-
-                        except Exception as e:
-                            print('PATTERN_CLASS_WITH_PARENT__CPP except\n\t' + str(e))
-                        break
-                    elif re.match(PATTERN_CLASS_DEFINE__CPP, line):
-                        classname = re.search(KEYWORD_CLASS + '(.*)', line).group(1).strip()
-                        try:
-                            classname = classname[:classname.index(r' ')]
-                        except Exception as e:
-                            print('PATTERN_CLASS_DEFINE__CPP except\n\t' + str(e))
-                        try: # bug fix @ 190722
-                            classname = classname[:classname.index(r'{')]
-                        except Exception as e:
-                            print('PATTERN_CLASS_DEFINE__CPP except\n\t' + str(e))
-                        if len(classname) > 0 and classname not in excluded_class:
-                            list_class_def__cpp.append(classname)
-                            dict_filename_classname__cpp[filename] = classname
-                            if classname not in dict_classname_treenode__cpp.keys():
-                                nd = TreeNode(classname)
-                                dict_classname_treenode__cpp[classname] = nd
-                        break
-                f.close()
+                            break
+                    f.close()
     print('='*10 + '\tmapping of filename - classname begin\t' + '='*10)
     print('-'*10 + '\tjava\t' + '-'*10)
     for filename in dict_filename_classname:
@@ -397,141 +415,142 @@ def scan_class_define(root_dir, mode, excluded_class, key_class, depth):
         print(filename + ' : ' + dict_filename_classname__cpp[filename])
     print('='*10 + '\tmapping of filename - classname end\t' + '='*10)
     if (len(dict_classname_treenode) > 0 or len(dict_classname_treenode__cpp) > 0) and mode.find('r') >= 0:
-        for root, subdirs, files in os.walk(root_dir):
-            print('tree \t' + str(files))
-            for filename in files:
-                if filename.find('.java') > 0:
-                    filepath = os.path.join(root, filename)
-                    print('parsing class relationship in \t' + filepath)
-                    f = open(filepath, 'r')
-                    buff = f.read()
-                    buff = re.sub(PATTERN_CLASS_DEFINE + '.*\n?', '', buff)
-                    buff = re.sub(PATTERN_CLASS_WITH_PARENT + '.*\n?', '', buff)
-                    buff = re.sub(PATTERN_CLASS_IMPLEMENT_INTERFACE + '.*\n?', '', buff)
-                    buff = re.sub(r'import ' + '.*\n?', '', buff)
-                    f.close()
-                    set_reliedclass = set()
+        for root_dir in sRootDir:
+            for root, subdirs, files in os.walk(root_dir):
+                print('tree \t' + str(files))
+                for filename in files:
+                    if filename.find('.java') > 0:
+                        filepath = os.path.join(root, filename)
+                        print('parsing class relationship in \t' + filepath)
+                        f = open(filepath, 'r')
+                        buff = f.read()
+                        buff = re.sub(PATTERN_CLASS_DEFINE + '.*\n?', '', buff)
+                        buff = re.sub(PATTERN_CLASS_WITH_PARENT + '.*\n?', '', buff)
+                        buff = re.sub(PATTERN_CLASS_IMPLEMENT_INTERFACE + '.*\n?', '', buff)
+                        buff = re.sub(r'import ' + '.*\n?', '', buff)
+                        f.close()
+                        set_reliedclass = set()
 
-                    fclass = dict_filename_classname.get(filename)
+                        fclass = dict_filename_classname.get(filename)
 
-                    if fclass is None:
-                        print('skip due to no class defined in ' + filename)
-                        continue
-
-                    if fclass not in dict_classname_treenode:
-                        nd = TreeNode(fclass)
-                        dict_classname_treenode[fclass] = nd
-                    nd_fclass = dict_classname_treenode.get(fclass)
-
-                    for clz in dict_classname_treenode:
-                        pat = r"\ " + clz + r"\.|new\ " + clz + r"|\"[a-zA-Z]+\." + clz + r"\""
-                        #print(pat)
-                        # \ Intent\.|new Intent
-                        if re.search(pat, buff):
-                            set_reliedclass.add(clz)
-                            # clz's node has created already
-                            nd_clz = dict_classname_treenode.get(clz)
-                            print('\t find relied class ' + nd_clz.name)
-                            nd_clz.add_lchild(fclass)
-                            nd_fclass.add_rchild(clz)
-                    dict_class_reliedclass[fclass] = set_reliedclass
-                    if len(set_reliedclass) < 1:
-                        print('\t no relied class')
-                elif filename.endswith('.h'):
-                    filepath = os.path.join(root, filename)
-                    print('parsing class relationship in \t'+ filename + ' : ' + filepath)
-                    f = open(filepath, 'r')
-                    buff = f.read()
-                    buff = re.sub(PATTERN_CLASS_DEFINE__CPP + '.*\n?', '', buff)
-                    buff = re.sub(PATTERN_CLASS_WITH_PARENT__CPP + '.*\n?', '', buff)
-                    buff = re.sub(r'include ' + '.*\n?', '', buff)
-                    f.close()
-                    set_reliedclass = set()
-
-                    fclass = dict_filename_classname__cpp.get(filename)
-
-                    if fclass is None:
-                        print('skip due to no class defined in ' + filename)
-                        continue
-
-                    if fclass not in dict_classname_treenode__cpp:
-                        nd = TreeNode(fclass)
-                        dict_classname_treenode__cpp[fclass] = nd
-                    nd_fclass = dict_classname_treenode__cpp.get(fclass)
-
-                    if dict_class_reliedclass__cpp.get(fclass) is not None:
-                        set_reliedclass = dict_class_reliedclass__cpp.get(fclass)
-
-                    for clz in dict_classname_treenode__cpp:
-                        pat = r'\ *' + clz + r'(<\w+>)?' + r'\ *' + r'\*?' + r'\ *' + r'\w+' + r'\ *\w+\ *;' # member defined in header file
-                        # \ Intent\.|new Intent
-                        if re.search(pat, buff):
-                            set_reliedclass.add(clz)
-                            # clz's node has created already
-                            nd_clz = dict_classname_treenode__cpp.get(clz)
-                            print('\t find relied class (member ship) ' + nd_clz.name)
-                            nd_clz.add_lchild(fclass)
-                            nd_fclass.add_rchild(clz)
-                    dict_class_reliedclass__cpp[fclass] = set_reliedclass
-                    if len(set_reliedclass) < 1:
-                        print('\t no relied class')
-                elif filename.endswith('.cpp'):
-                    filepath = os.path.join(root, filename)
-                    print('parsing class relationship in \t'+ filename + ' : ' + filepath)
-                    f = open(filepath, 'r')
-                    buff = f.read()
-                    buff = re.sub(PATTERN_CLASS_DEFINE__CPP + '.*\n?', '', buff)
-                    buff = re.sub(PATTERN_CLASS_WITH_PARENT__CPP + '.*\n?', '', buff)
-                    buff = re.sub(r'include ' + '.*\n?', '', buff)
-                    f.close()
-
-                    set_reliedclass = set()
-                    ismaincpp = False
-
-                    # [TODO] we simply suppose header file always has same file name with cpp
-                    fclass = dict_filename_classname__cpp.get(filename.replace(r'.cpp', r'.h'))
-
-                    if fclass is None:
-                        # check if it's the main entry cpp file
-                        #   - int main(
-                        pat = r'int\ +main\ *\('
-                        if re.search(pat, buff):
-                            ismaincpp = True
-                            fclass = filename
-                        else:
+                        if fclass is None:
                             print('skip due to no class defined in ' + filename)
                             continue
-                    else:
-                        print('\t checking class ' + fclass)
 
-                    if fclass not in dict_classname_treenode__cpp:
-                        nd = TreeNode(fclass)
-                        dict_classname_treenode__cpp[fclass] = nd
-                    nd_fclass = dict_classname_treenode__cpp.get(fclass)
+                        if fclass not in dict_classname_treenode:
+                            nd = TreeNode(fclass)
+                            dict_classname_treenode[fclass] = nd
+                        nd_fclass = dict_classname_treenode.get(fclass)
 
-                    if dict_class_reliedclass__cpp.get(fclass) is not None:
-                        set_reliedclass = dict_class_reliedclass__cpp.get(fclass)
+                        for clz in dict_classname_treenode:
+                            pat = r"\ " + clz + r"\.|new\ " + clz + r"|\"[a-zA-Z]+\." + clz + r"\""
+                            #print(pat)
+                            # \ Intent\.|new Intent
+                            if re.search(pat, buff):
+                                set_reliedclass.add(clz)
+                                # clz's node has created already
+                                nd_clz = dict_classname_treenode.get(clz)
+                                print('\t find relied class ' + nd_clz.name)
+                                nd_clz.add_lchild(fclass)
+                                nd_fclass.add_rchild(clz)
+                        dict_class_reliedclass[fclass] = set_reliedclass
+                        if len(set_reliedclass) < 1:
+                            print('\t no relied class')
+                    elif filename.endswith('.h'):
+                        filepath = os.path.join(root, filename)
+                        print('parsing class relationship in \t'+ filename + ' : ' + filepath)
+                        f = open(filepath, 'r')
+                        buff = f.read()
+                        buff = re.sub(PATTERN_CLASS_DEFINE__CPP + '.*\n?', '', buff)
+                        buff = re.sub(PATTERN_CLASS_WITH_PARENT__CPP + '.*\n?', '', buff)
+                        buff = re.sub(r'include ' + '.*\n?', '', buff)
+                        f.close()
+                        set_reliedclass = set()
 
-                    for clz in dict_classname_treenode__cpp:
-                        pat = r'new\ +' + r'(\w*::)?' + clz # new class instance in cpp
-                                                            # only care about new instance, as invoke relation ship is to complex
-                        if ismaincpp:
-                            pat = pat + r'|' + clz + r'::' + r'|' + clz + r'\ +' + r'|' + r'<' + clz + r'>'
-                        # \ Intent\.|new Intent
-                        if re.search(pat, buff) and clz != fclass:
-                            set_reliedclass.add(clz)
-                            # clz's node has created already
-                            nd_clz = dict_classname_treenode__cpp.get(clz)
-                            print('\t find relied class (new instance) ' + nd_clz.name)
-                            nd_clz.add_lchild(fclass)
-                            nd_fclass.add_rchild(clz)
-                    dict_class_reliedclass__cpp[fclass] = set_reliedclass
-                    if len(set_reliedclass) < 1:
-                        print('\t no relied class')
+                        fclass = dict_filename_classname__cpp.get(filename)
+
+                        if fclass is None:
+                            print('skip due to no class defined in ' + filename)
+                            continue
+
+                        if fclass not in dict_classname_treenode__cpp:
+                            nd = TreeNode(fclass)
+                            dict_classname_treenode__cpp[fclass] = nd
+                        nd_fclass = dict_classname_treenode__cpp.get(fclass)
+
+                        if dict_class_reliedclass__cpp.get(fclass) is not None:
+                            set_reliedclass = dict_class_reliedclass__cpp.get(fclass)
+
+                        for clz in dict_classname_treenode__cpp:
+                            pat = r'\ *' + clz + r'(<\w+>)?' + r'\ *' + r'\*?' + r'\ *' + r'\w+' + r'\ *\w+\ *;' # member defined in header file
+                            # \ Intent\.|new Intent
+                            if re.search(pat, buff):
+                                set_reliedclass.add(clz)
+                                # clz's node has created already
+                                nd_clz = dict_classname_treenode__cpp.get(clz)
+                                print('\t find relied class (member ship) ' + nd_clz.name)
+                                nd_clz.add_lchild(fclass)
+                                nd_fclass.add_rchild(clz)
+                        dict_class_reliedclass__cpp[fclass] = set_reliedclass
+                        if len(set_reliedclass) < 1:
+                            print('\t no relied class')
+                    elif filename.endswith('.cpp'):
+                        filepath = os.path.join(root, filename)
+                        print('parsing class relationship in \t'+ filename + ' : ' + filepath)
+                        f = open(filepath, 'r')
+                        buff = f.read()
+                        buff = re.sub(PATTERN_CLASS_DEFINE__CPP + '.*\n?', '', buff)
+                        buff = re.sub(PATTERN_CLASS_WITH_PARENT__CPP + '.*\n?', '', buff)
+                        buff = re.sub(r'include ' + '.*\n?', '', buff)
+                        f.close()
+
+                        set_reliedclass = set()
+                        ismaincpp = False
+
+                        # [TODO] we simply suppose header file always has same file name with cpp
+                        fclass = dict_filename_classname__cpp.get(filename.replace(r'.cpp', r'.h'))
+
+                        if fclass is None:
+                            # check if it's the main entry cpp file
+                            #   - int main(
+                            pat = r'int\ +main\ *\('
+                            if re.search(pat, buff):
+                                ismaincpp = True
+                                fclass = filename
+                            else:
+                                print('skip due to no class defined in ' + filename)
+                                continue
+                        else:
+                            print('\t checking class ' + fclass)
+
+                        if fclass not in dict_classname_treenode__cpp:
+                            nd = TreeNode(fclass)
+                            dict_classname_treenode__cpp[fclass] = nd
+                        nd_fclass = dict_classname_treenode__cpp.get(fclass)
+
+                        if dict_class_reliedclass__cpp.get(fclass) is not None:
+                            set_reliedclass = dict_class_reliedclass__cpp.get(fclass)
+
+                        for clz in dict_classname_treenode__cpp:
+                            pat = r'new\ +' + r'(\w*::)?' + clz # new class instance in cpp
+                                                                # only care about new instance, as invoke relation ship is to complex
+                            if ismaincpp:
+                                pat = pat + r'|' + clz + r'::' + r'|' + clz + r'\ +' + r'|' + r'<' + clz + r'>'
+                            # \ Intent\.|new Intent
+                            if re.search(pat, buff) and clz != fclass:
+                                set_reliedclass.add(clz)
+                                # clz's node has created already
+                                nd_clz = dict_classname_treenode__cpp.get(clz)
+                                print('\t find relied class (new instance) ' + nd_clz.name)
+                                nd_clz.add_lchild(fclass)
+                                nd_fclass.add_rchild(clz)
+                        dict_class_reliedclass__cpp[fclass] = set_reliedclass
+                        if len(set_reliedclass) < 1:
+                            print('\t no relied class')
 
     #print(dict_class_reliedclass)
     mClzRelationShips = ClzRelationShips()
-    mClzRelationShips.set_var("root_dir", root_dir)
+    mClzRelationShips.set_var("root_dir", list(sRootDir)[0])
     mClzRelationShips.set_var("dict_class_parent", dict_class_parent)
     mClzRelationShips.set_var("dict_class_interface", dict_class_interface)
     mClzRelationShips.set_var("dict_class_reliedclass", dict_class_reliedclass)
@@ -554,12 +573,14 @@ def scan_class_define(root_dir, mode, excluded_class, key_class, depth):
         dump(dict_classname_treenode__cpp)
 
 
-def main(root_dir, mode, excluded_class, key_class, depth):
-    scan_class_define(root_dir, mode, excluded_class, key_class, depth)
+def main(sRootDir, mode, excluded_class, key_class, depth):
+    scan_class_define(sRootDir, mode, excluded_class, key_class, depth)
 
 
 def print_help():
     print('''
+v1.0
+
 Usage: python scan_clazz.py -p dir_to_scan [options]
 
     Options:
@@ -577,6 +598,9 @@ Usage: python scan_clazz.py -p dir_to_scan [options]
             valid depth must be a integer between [3-9], include 3 and 9
             otherwise depth will be discarded
             depth is calculated from key class, a class direct rely on / relied by key class has depth 1 
+
+Feature Support:
+    support multiple -p in 1.0+
     ''')
 
 
@@ -584,6 +608,7 @@ if __name__ == '__main__':
     CACHED_INFO.append('\nscan cmd\n\t' + ' '.join(sys.argv))
 
     root_dir = None
+    sRootDir = set()
     mode = 'ci'  # class inherit + interface implement
                  # possible value : mix of below values
                  #   - 'c' : class
@@ -601,6 +626,7 @@ if __name__ == '__main__':
             elif argv == '-p':
                 try:
                     root_dir = sys.argv[i + 1]
+                    sRootDir.add(root_dir)
                 except:
                     break
             elif argv == '-m':
@@ -640,10 +666,10 @@ if __name__ == '__main__':
         depth = -1
         CACHED_INFO.append('depth ' + str(depth) + ' is dropped as key class is not assigned')
 
-    if root_dir is not None:
+    if len(sRootDir) > 0:
         excluded_class = CLASS_EXCLUDED_ALWAYS + excluded_class
         print('final excluded class list : ' + str(excluded_class))
-        main(root_dir, mode, excluded_class, key_class, depth)
+        main(sRootDir, mode, excluded_class, key_class, depth)
     else:
         print('pls assign root dir to scan with -p')
     os._exit(0)

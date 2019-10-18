@@ -2,6 +2,7 @@
 
 DicArgvTypes = {
         "root_dir" : "<class 'str'>", 
+        "sRootDir" : "<class 'set'>",
         "dict_class_parent" : "<class 'dict'>", 
         "dict_class_interface" : "<class 'dict'>",
         "dict_class_reliedclass" : "<class 'dict'>", 
