@@ -66,6 +66,7 @@ CLASS_EXCLUDED_ALWAYS = [
     r'Executor',
     r'AbstractCursor',
     r'State',
+    r'*Test',
 ]
 
 CACHED_INFO = []
@@ -205,8 +206,10 @@ def draw_class_relationship(mClzRelationShips):
     print('\noutput: ' + root_dir + '/' + lang + 'output')
     do_real_draw_if_possible(os.path.join(root_dir, lang + 'output'), lang)
 
+def fliter_clz(clz, ex_clz_list):
+    return True if clz not in ex_clz_list and not clz.endswith('Test') else False
 
-def scan_class_define(sRootDir, mode, excluded_class, key_class, depth):
+def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, excluded_class, key_class, depth):
     dict_filename_classname = {}
     dict_class_parent = {}
     dict_class_interface = {}
@@ -220,6 +223,14 @@ def scan_class_define(sRootDir, mode, excluded_class, key_class, depth):
 
     dict_classname_treenode = {}
     dict_classname_treenode__cpp = {}
+
+    for jc in included_java_class:
+        nd = TreeNode(jc)
+        dict_classname_treenode[jc] = nd
+    for cc in included_cpp_class:
+        nd = TreeNode(cc)
+        dict_classname_treenode__cpp[cc] = nd
+
     for root_dir in sRootDir:
         for root, subdirs, files in os.walk(root_dir):
             print('file tree \t' + str(files))
@@ -248,14 +259,14 @@ def scan_class_define(sRootDir, mode, excluded_class, key_class, depth):
                                     except:
                                         pass
                                     should_link = True
-                                    if len(classname) > 0 and classname not in excluded_class:
+                                    if len(classname) > 0 and fliter_clz(classname,excluded_class):
                                         dict_filename_classname[filename] = classname
                                         if classname not in dict_classname_treenode.keys():
                                             nd = TreeNode(classname)
                                             dict_classname_treenode[classname] = nd
                                     else:
                                         should_link = False
-                                    if mode.find('c') >= 0 and len(parentname) > 0 and parentname not in excluded_class:
+                                    if mode.find('c') >= 0 and len(parentname) > 0 and fliter_clz(parentname,excluded_class):
                                         if parentname not in dict_classname_treenode.keys():
                                             nd = TreeNode(parentname)
                                             dict_classname_treenode[parentname] = nd
@@ -285,7 +296,7 @@ def scan_class_define(sRootDir, mode, excluded_class, key_class, depth):
                                         pass
                                     classname = classname.strip()
                                     should_link = True
-                                    if len(classname) > 0 and classname not in excluded_class:
+                                    if len(classname) > 0 and fliter_clz(classname,excluded_class):
                                         dict_filename_classname[filename] = classname
                                         if classname not in dict_classname_treenode.keys():
                                             nd = TreeNode(classname)
@@ -295,7 +306,7 @@ def scan_class_define(sRootDir, mode, excluded_class, key_class, depth):
                                     
                                     for interface in interfaces.split(r','):
                                         interface = interface.strip()
-                                        if mode.find('i') >= 0 and interface not in excluded_class:
+                                        if mode.find('i') >= 0 and fliter_clz(interface,excluded_class):
                                             if interface not in dict_classname_treenode.keys():
                                                 nd = TreeNode(interface)
                                                 dict_classname_treenode[interface] = nd
@@ -317,7 +328,7 @@ def scan_class_define(sRootDir, mode, excluded_class, key_class, depth):
                                 classname = classname[:classname.index(r' ')]
                             except Exception as e:
                                 print('PATTERN_CLASS_DEFINE except\n\t' + str(e))
-                            if len(classname) > 0 and classname not in excluded_class:
+                            if len(classname) > 0 and fliter_clz(classname,excluded_class):
                                 list_class_def.append(classname)
                                 dict_filename_classname[filename] = classname
                                 if classname not in dict_classname_treenode.keys():
@@ -358,7 +369,7 @@ def scan_class_define(sRootDir, mode, excluded_class, key_class, depth):
                                 except:
                                     pass
                                 should_link = True
-                                if len(classname) > 0 and classname not in excluded_class:
+                                if len(classname) > 0 and fliter_clz(classname,excluded_class):
                                     dict_filename_classname__cpp[filename] = classname
                                     if classname not in dict_classname_treenode__cpp.keys():
                                         nd = TreeNode(classname)
@@ -369,7 +380,7 @@ def scan_class_define(sRootDir, mode, excluded_class, key_class, depth):
                                     parentnames = parentname_multi.split(',')
                                     for parentname in parentnames:
                                         parentname = parentname.strip()
-                                        if mode.find('c') >= 0 and len(parentname) > 0 and parentname not in excluded_class:
+                                        if mode.find('c') >= 0 and len(parentname) > 0 and fliter_clz(parentname,excluded_class):
                                             if parentname not in dict_classname_treenode__cpp.keys():
                                                 nd = TreeNode(parentname)
                                                 dict_classname_treenode__cpp[parentname] = nd
@@ -398,7 +409,7 @@ def scan_class_define(sRootDir, mode, excluded_class, key_class, depth):
                                 classname = classname[:classname.index(r'{')]
                             except Exception as e:
                                 print('PATTERN_CLASS_DEFINE__CPP except\n\t' + str(e))
-                            if len(classname) > 0 and classname not in excluded_class:
+                            if len(classname) > 0 and fliter_clz(classname,excluded_class):
                                 list_class_def__cpp.append(classname)
                                 dict_filename_classname__cpp[filename] = classname
                                 if classname not in dict_classname_treenode__cpp.keys():
@@ -443,8 +454,8 @@ def scan_class_define(sRootDir, mode, excluded_class, key_class, depth):
                         nd_fclass = dict_classname_treenode.get(fclass)
 
                         for clz in dict_classname_treenode:
-                            pat = r"\ " + clz + r"\.|new\ " + clz + r"|\"[a-zA-Z]+\." + clz + r"\""
-                            #print(pat)
+                            pat = r"\ " + clz + r"\.|new\ " + clz + r"|\"[a-zA-Z]+\." + clz + r"\"" + r"|"+ clz + "\ +[a-zA-Z_]+\ +=" + r"|" + clz + r"\.class"
+                            #print('debug : ' + pat)
                             # \ Intent\.|new Intent
                             if re.search(pat, buff):
                                 set_reliedclass.add(clz)
@@ -573,8 +584,8 @@ def scan_class_define(sRootDir, mode, excluded_class, key_class, depth):
         dump(dict_classname_treenode__cpp)
 
 
-def main(sRootDir, mode, excluded_class, key_class, depth):
-    scan_class_define(sRootDir, mode, excluded_class, key_class, depth)
+def main(sRootDir, mode, included_java_class, included_cpp_class, excluded_class, key_class, depth):
+    scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, excluded_class, key_class, depth)
 
 
 def print_help():
@@ -589,6 +600,12 @@ Usage: python scan_clazz.py -p dir_to_scan [options]
             'c' - parsing class and inherit
             'i' - parsing interface and implement (NOT supported)
             'r' - parsing relationship between classes (used by)
+    -ij class[,class2,class3,...,classn]
+            include additional java classes
+            for example, include additional framework calss when scanning packages app
+    -ic class[,class2,class3,...,classn]
+            include additional cpp classes
+            for example, include additional framework calss when scanning packages app
     -e class[,class2,class3,...,classn]
             exclude classes in parsing result
     -k class
@@ -614,6 +631,8 @@ if __name__ == '__main__':
                  #   - 'c' : class
                  #   - 'i' : interface
                  #   - 'r' : rely
+    included_java_class = []
+    included_cpp_class = []
     excluded_class = []
     key_class = None
     depth = -1  # unlimited, valid depth is [3-9], other value will be ignored
@@ -632,6 +651,18 @@ if __name__ == '__main__':
             elif argv == '-m':
                 try:
                     mode = sys.argv[i + 1]
+                except:
+                    pass
+            elif argv == '-ij':  # included java class, split with ','
+                try:
+                    included_java_class = sys.argv[i + 1].split(',')
+                    print('user passed included additional java class list : ' + str(included_java_class))
+                except:
+                    pass
+            elif argv == '-ic':  # included cpp class, split with ','
+                try:
+                    included_cpp_class = sys.argv[i + 1].split(',')
+                    print('user passed included additional cpp class list : ' + str(included_cpp_class))
                 except:
                     pass
             elif argv == '-e':  # excluded class, split with ','
@@ -669,7 +700,7 @@ if __name__ == '__main__':
     if len(sRootDir) > 0:
         excluded_class = CLASS_EXCLUDED_ALWAYS + excluded_class
         print('final excluded class list : ' + str(excluded_class))
-        main(sRootDir, mode, excluded_class, key_class, depth)
+        main(sRootDir, mode, included_java_class, included_cpp_class, excluded_class, key_class, depth)
     else:
         print('pls assign root dir to scan with -p')
     os._exit(0)
