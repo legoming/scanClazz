@@ -14,7 +14,7 @@ KEYWORD_CLASS = r"class"
 PATTERN_CLASS_NAME = r"[0-9a-zA-Z_\.]*(<[0-9a-zA-Z_\.]*>)?"
 KEYWORD_EXTEND = r'extends'
 KEYWORD_EXTEND__CPP = r'\ *:\ *' # with optional split
-KEYWORD_BASE_CLASS_OPTIONAL_PREFIX = r'(\ *public\ *|\ *protected\ *|\ *private\ *)?'
+KEYWORD_BASE_CLASS_OPTIONAL_PREFIX = r'(\ *public\ *|\ *protected\ *|\ *private\ *)?(\ *virtual\ *)?'
 
 SPLIT_SPACE = r'\ +'
 SPLIT_SPACE_RETURN = r'(\ +|\n\ *)'
@@ -366,6 +366,10 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
                                     pass
                                 try:
                                     parentname_multi = parentname_multi.replace(r'private ', r'')
+                                except:
+                                    pass
+                                try:
+                                    parentname_multi = parentname_multi.replace(r'virtual ', r'')
                                 except:
                                     pass
                                 should_link = True
