@@ -33,7 +33,8 @@ PATTERN_CLASS_DEFINE = KEYWORD_PUBLIC + SPLIT_SPACE + \
                        KEYWORD_CLASS + SPLIT_SPACE + \
                        PATTERN_CLASS_NAME + SPLIT_SPACE_RETURN
 
-PATTERN_CLASS_IMPLEMENT_INTERFACE = r'public class [0-9a-zA-Z_\.]*(<[0-9a-zA-Z_\.]*>)? \w*\ *[0-9a-zA-Z_\.]*(<[0-9a-zA-Z_\.]*>)? implements ([0-9a-zA-Z_\.]*(<[0-9a-zA-Z_\.]*>)?(,)?\ *)+\ *{'
+PATTERN_CLASS_IMPLEMENT_INTERFACE = r'public class [0-9a-zA-Z_\.]*(<[0-9a-zA-Z_\.]*>)? \w*\ *[0-9a-zA-Z_\.]*(<[0-9a-zA-Z_\.]*>)? implements ([0-9a-zA-Z_\.]*(<[0-9a-zA-Z_\.]*>)?(,)?\ *)+\ *({|,|\n)'
+#r'public class [0-9a-zA-Z_\.]*(<[0-9a-zA-Z_\.]*>)? \w*\ *[0-9a-zA-Z_\.]*(<[0-9a-zA-Z_\.]*>)? implements ([0-9a-zA-Z_\.]*(<[0-9a-zA-Z_\.]*>)?(,)?\ *)+\ *{'
 
 # class\ +[0-9a-zA-Z_\.]*(<[0-9a-zA-Z_\.]*>)?\ *:\ *(\ *public\ *|\ *protected\ *|\ *private\ *)?[0-9a-zA-Z_\.]*(<[0-9a-zA-Z_\.]*>)?(\ *,\ *(\ *public\ *|\ *protected\ *|\ *private\ *)?[0-9a-zA-Z_\.]*(<[0-9a-zA-Z_\.]*>)?)*\ *\n*\ *{
 # change from r'\ *\n*\ *{' to r'\ *(\n|{)', as we scan line by line
