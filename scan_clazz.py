@@ -132,10 +132,10 @@ def draw_class_relationship(mClzRelationShips):
                     CACHED_INFO.append('drop depth exceeded ' + cls)
                 elif nd.is_parent():
                     print('parent node ' + nd.name)
-                    fo.write('\n    ' + nd.displayname + '[shape = component]')
+                    fo.write('\n    ' + nd.displayname + '[shape = plaintext]')#'[shape = component]')
                 elif nd.is_interface():
                     print('interface node ' + nd.name)
-                    fo.write('\n    ' + nd.displayname + '[shape = component]')
+                    fo.write('\n    ' + nd.displayname + '[shape = plaintext]')#'[shape = component]')
                 elif nd.is_leaf():
                     fo.write('\n    ' + nd.displayname + '[shape = plaintext]')
                 else:
@@ -532,7 +532,10 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
                             pat = r'int\ +main\ *\('
                             if re.search(pat, buff):
                                 ismaincpp = True
-                                fclass = filename
+                                fclass = filename.replace(r'.cpp', r'_cpp')
+                                if fclass in excluded_class:
+                                    print('skip due to ' + fclass + ' is excluded')
+                                    continue
                             else:
                                 print('skip due to no class defined in ' + filename)
                                 continue
