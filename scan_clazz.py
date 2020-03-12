@@ -687,7 +687,7 @@ if __name__ == '__main__':
             elif argv == '-d':  # max depth from key class, will be dropped if key class is not assigned
                 try:
                     depth = int(sys.argv[i + 1])
-                    if depth < 3 or depth > 9:
+                    if depth < 1 or depth > 9:
                         depth = -1
                         CACHED_INFO.append('depth ' + str(depth) + ' is dropped as it\'s not in [3-9]')
                 except:

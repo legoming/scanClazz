@@ -120,6 +120,8 @@ class TreeNode:
         else:
             if self.is_equal(clz_name):
                 return True
+            elif self.is_parent_of_node(clz_name) or self.is_child_of_node(clz_name):
+                return True
             else:
                 if len(self.lchild) > 0:
                     for lc in self.lchild:
