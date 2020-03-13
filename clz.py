@@ -3,11 +3,13 @@
 DicArgvTypes = {
         "root_dir" : "<class 'str'>", 
         "sRootDir" : "<class 'set'>",
-        "dict_class_parent" : "<class 'dict'>", 
-        "dict_class_interface" : "<class 'dict'>",
-        "dict_class_reliedclass" : "<class 'dict'>", 
-        "dict_classname_treenode" : "<class 'dict'>", 
+        "dict_classid_parentid" : "<class 'dict'>", 
+        "dict_classid_interfaceid" : "<class 'dict'>",
+        "dict_classid_reliedclass" : "<class 'dict'>", 
+        "dict_classid_treenode" : "<class 'dict'>", 
+        "set_classname" : "<class 'set'>",
         "key_class" : "<class 'str'>", 
+        "key_class_id" : "<class 'str'>", 
         "depth" : "<class 'int'>", 
         "lang" : "<class 'str'>"}
 

@@ -7,13 +7,14 @@ import subprocess
 
 from tree import TreeNode, dump, print_debug, debug
 from clz import ClzRelationShips
+from util_namespace import NameSpaceUtil
 
 KEYWORD_PUBLIC = r"public"
 KEYWORD_ABSTRACT = r"(abstract\ +)?"
 KEYWORD_CLASS = r"class"
 PATTERN_CLASS_NAME = r"[0-9a-zA-Z_\.]*(<[0-9a-zA-Z_\.]*>)?"
 KEYWORD_EXTEND = r'extends'
-KEYWORD_EXTEND__CPP = r'\ *:\ *' # with optional split
+KEYWORD_EXTEND__CPP = r'\ *\:\ *' # with optional split
 KEYWORD_BASE_CLASS_OPTIONAL_PREFIX = r'(\ *public\ *|\ *protected\ *|\ *private\ *)?(\ *virtual\ *)?'
 
 SPLIT_SPACE = r'\ +'
@@ -101,14 +102,16 @@ def do_real_draw_if_possible(input, lang):
 
 def draw_class_relationship(mClzRelationShips):
     root_dir = mClzRelationShips.get_var("root_dir")
-    dict_class_parent = mClzRelationShips.get_var("dict_class_parent")
-    dict_class_interface = mClzRelationShips.get_var("dict_class_interface")
-    dict_class_reliedclass = mClzRelationShips.get_var("dict_class_reliedclass")
-    dict_classname_treenode = mClzRelationShips.get_var("dict_classname_treenode")
+    dict_classid_parentid = mClzRelationShips.get_var("dict_classid_parentid")
+    dict_classid_interfaceid = mClzRelationShips.get_var("dict_classid_interfaceid")
+    dict_classid_reliedclass = mClzRelationShips.get_var("dict_classid_reliedclass")
+    dict_classid_treenode = mClzRelationShips.get_var("dict_classid_treenode")
+    set_classname = mClzRelationShips.get_var("set_classname")
     key_class = mClzRelationShips.get_var("key_class")
+    key_class_id = mClzRelationShips.get_var("key_class_id")
     depth = mClzRelationShips.get_var("depth")
     lang = mClzRelationShips.get_var("lang")
-    if dict_classname_treenode is not None and len(dict_classname_treenode) >0:
+    if dict_classid_treenode is not None and len(dict_classid_treenode) >0:
         set_class_depth_exceeded = set()
 
         fo = open(os.path.join(root_dir, lang + 'output'), 'w')
@@ -117,88 +120,94 @@ def draw_class_relationship(mClzRelationShips):
         fo.write('\ndigraph G {')
         #fo.write('\nrankdir = LR')
 
-        haskey = True if key_class is not None and key_class in dict_classname_treenode.keys() else False
-        key_nd = dict_classname_treenode.get(key_class)
+        haskey = True if key_class is not None and key_class in set_classname and key_class_id in dict_classid_treenode else False
+        key_nd = dict_classid_treenode.get(key_class_id)
+        print('key_nd = ' + str(key_nd))
 
-        for cls in dict_classname_treenode:
-            nd = dict_classname_treenode.get(cls)
+        for cls_id in dict_classid_treenode:
+            nd = dict_classid_treenode.get(cls_id)
             if nd is not None and nd.is_valid_node():
                 if nd.is_standalone():
-                    print('drop standalone ' + nd.name)
-                elif nd.is_equal(key_class):
-                    fo.write('\n    ' + nd.displayname + '[shape = egg color=green]')
-                elif haskey and not key_nd.is_clz_relate_with_node_in_depth(cls, depth, dict_classname_treenode):
-                    set_class_depth_exceeded.add(cls)
-                    CACHED_INFO.append('drop depth exceeded ' + cls)
+                    print('drop standalone ' + nd.id)
+                elif nd.is_equal(key_class_id):
+                    fo.write('\n    ' + nd.displayid + '[shape = egg color=green]')
+                elif haskey and not key_nd.is_clz_relate_with_node_in_depth(cls_id, depth, dict_classid_treenode):
+                    set_class_depth_exceeded.add(cls_id)
+                    CACHED_INFO.append('drop depth exceeded ' + nd.id)
                 elif nd.is_parent():
                     print('parent node ' + nd.name)
-                    fo.write('\n    ' + nd.displayname + '[shape = plaintext]')#'[shape = component]')
+                    fo.write('\n    ' + nd.displayid + '[shape = plaintext label="' + nd.displayname + r'\n[' + nd.displayns + ']"]')#'[shape = component]')
                 elif nd.is_interface():
                     print('interface node ' + nd.name)
-                    fo.write('\n    ' + nd.displayname + '[shape = plaintext]')#'[shape = component]')
+                    fo.write('\n    ' + nd.displayid + '[shape = plaintext label="' + nd.displayname + r'\n[' + nd.displayns + ']"]')#'[shape = component]')
                 elif nd.is_leaf():
-                    fo.write('\n    ' + nd.displayname + '[shape = plaintext]')
+                    fo.write('\n    ' + nd.displayid + '[shape = plaintext label="' + nd.displayname + r'\n[' + nd.displayns + ']"]')
                 else:
-                    fo.write('\n    ' + nd.displayname + '[shape = note]')
+                    fo.write('\n    ' + nd.displayid + '[shape = note label="' + nd.displayname + r'\n[' + nd.displayns + ']"]')
             else:
                 print('invalid node found')
         if len(set_class_depth_exceeded) > 0:
             for c in set_class_depth_exceeded:
-                nc = dict_classname_treenode.get(c)
+                nc = dict_classid_treenode.get(c)
                 if nc.parent is not None:
-                    dict_classname_treenode.get(nc.parent).childs.remove(c)
+                    dict_classid_treenode.get(nc.parent).childs.remove(c)
                 for ic in nc.childs:
-                    dict_classname_treenode.get(ic).parent = None
+                    dict_classid_treenode.get(ic).parent = None
                 for lc in nc.lchild:
-                    dict_classname_treenode.get(lc).rchild.remove(c)
+                    dict_classid_treenode.get(lc).rchild.remove(c)
                 for rc in nc.rchild:
-                    dict_classname_treenode.get(rc).lchild.remove(c)
-                del dict_classname_treenode[c]
-        if dict_class_parent is not None and len(dict_class_parent) > 0:
-            for cls in dict_class_parent:
-                if cls not in dict_classname_treenode.keys() or \
-                   dict_class_parent[cls] not in dict_classname_treenode.keys():
-                    CACHED_INFO.append('skip inherit "' + cls + '" --▷ "' + dict_class_parent[cls] + '"')
+                    dict_classid_treenode.get(rc).lchild.remove(c)
+                del dict_classid_treenode[c]
+        if dict_classid_parentid is not None and len(dict_classid_parentid) > 0:
+            for cls_id in dict_classid_parentid:
+                if cls_id not in dict_classid_treenode.keys() or \
+                   dict_classid_parentid[cls_id] not in dict_classid_treenode.keys():
+                    CACHED_INFO.append('skip inherit "' + cls_id + '" --▷ "' + dict_classid_parentid[cls_id] + '"')
                     continue
-                if cls is not None and dict_class_parent[cls] is not None:
-                    cls_converted = dict_classname_treenode.get(cls).displayname
-                    pnt_converted = dict_classname_treenode.get(dict_class_parent[cls]).displayname
+                if cls_id is not None and dict_classid_parentid[cls_id] is not None:
+                    cls_converted = dict_classid_treenode.get(cls_id).displayid
+                    pnt_converted = dict_classid_treenode.get(dict_classid_parentid[cls_id]).displayid
                     fo.write('\n    ' + cls_converted + ' -> ' + pnt_converted + '[arrowhead = empty color=purple]')
-        if dict_class_interface is not None and len(dict_class_interface) > 0:
-            for cls in dict_class_interface:
-                if cls not in dict_classname_treenode.keys() or \
-                   dict_class_interface[cls] not in dict_classname_treenode.keys():
-                    CACHED_INFO.append('skip interface "' + cls + '" - -▷ "' + dict_class_interface[cls] + '"')
+        if dict_classid_interfaceid is not None and len(dict_classid_interfaceid) > 0:
+            for cls_id in dict_classid_interfaceid:
+                if cls_id not in dict_classid_treenode.keys() or \
+                   dict_classid_interfaceid[cls_id] not in dict_classid_treenode.keys():
+                    CACHED_INFO.append('skip interface "' + cls_id + '" - -▷ "' + dict_classid_interfaceid[cls_id] + '"')
                     continue
-                if cls is not None and dict_class_interface[cls] is not None:
-                    cls_converted = dict_classname_treenode.get(cls).displayname
-                    pnt_converted = dict_classname_treenode.get(dict_class_interface[cls]).displayname
+                if cls_id is not None and dict_classid_interfaceid[cls_id] is not None:
+                    cls_converted = dict_classid_treenode.get(cls_id).displayid
+                    pnt_converted = dict_classid_treenode.get(dict_classid_interfaceid[cls_id]).displayid
                     fo.write('\n    ' + cls_converted + ' -> ' + pnt_converted + '[arrowhead = empty color=purple style=dashed]')
-        if dict_class_reliedclass is not None and len(dict_class_reliedclass) > 0:
-            for cls in dict_class_reliedclass:
-                if cls is not None and cls in dict_classname_treenode:
-                    cls_converted = dict_classname_treenode.get(cls).displayname
-                    if dict_class_reliedclass is not None:
-                        for relatedcls in dict_class_reliedclass.get(cls):
-                            if relatedcls not in dict_classname_treenode:
-                                CACHED_INFO.append('skip ' + cls + ' --> ' + relatedcls)
+        if dict_classid_reliedclass is not None and len(dict_classid_reliedclass) > 0:
+            for cls_id in dict_classid_reliedclass:
+                if cls_id is not None and cls_id in dict_classid_treenode:
+                    cls_converted = dict_classid_treenode.get(cls_id).displayid
+                    if dict_classid_reliedclass is not None:
+                        for relatedcls in dict_classid_reliedclass.get(cls_id):
+                            print('checking ' + cls_id + ' \'s relatedcls = ' + str(relatedcls))
+                            if relatedcls not in dict_classid_treenode:
+                                print('skipping ' + cls_id + ' \'s relatedcls = ' + str(relatedcls))
+                                CACHED_INFO.append('skip ' + cls_id + ' --> ' + relatedcls)
                                 continue
-                            if relatedcls != cls:
-                                relatedcls_converted = dict_classname_treenode.get(relatedcls).displayname
+                            if relatedcls != cls_id:
+                                relatedcls_converted = dict_classid_treenode.get(relatedcls).displayid
                                 if haskey and \
-                                        (key_nd.is_equal(cls) or
+                                        (key_nd.is_equal(cls_id) or
                                          key_nd.is_equal(relatedcls)):
+                                    print('writting 1 ' + cls_id + ' -> ' + str(relatedcls) + '\t: ' + cls_converted + ' -> ' + relatedcls_converted)
                                     fo.write('\n    ' + cls_converted + ' -> ' + relatedcls_converted + '[style = dashed]')
                                 elif haskey:
-                                    if cls not in set_class_depth_exceeded and \
+                                    if cls_id not in set_class_depth_exceeded and \
                                        relatedcls not in set_class_depth_exceeded:
+                                        print('writting 2 ' + cls_id + ' -> ' + str(relatedcls) + '\t: ' + cls_converted + ' -> ' + relatedcls_converted)
                                         fo.write('\n    ' + cls_converted + ' -> ' + relatedcls_converted + '[style = dashed color = gray]')
                                     else:
-                                        CACHED_INFO.append('drop relationship ' + cls + ' --> ' + relatedcls + ' due to depth exceed')
+                                        CACHED_INFO.append('drop relationship ' + cls_id + ' --> ' + relatedcls + ' due to depth exceed')
                                 else:
+                                    print('writting 3 ' + cls_id + ' -> ' + str(relatedcls) + '\t: ' + cls_converted + ' -> ' + relatedcls_converted)
                                     fo.write('\n    ' + cls_converted + ' -> ' + relatedcls_converted + '[style = dashed]')
                 else:
-                    CACHED_INFO.append('skip ' + cls + ' --> ...')
+                    CACHED_INFO.append('skip ' + cls_id + ' --> ...')
         fo.write('\n}')
         #fo.write('\n```')
         fo.close()
@@ -210,28 +219,63 @@ def draw_class_relationship(mClzRelationShips):
 def fliter_clz(clz, ex_clz_list):
     return True if clz not in ex_clz_list and not clz.endswith('Test') else False
 
+# return package and classname with package
+def getBestPackageName(clz, pkgSet, curPkg):
+    pkgname = curPkg + r'.' +clz # suppose in same package
+    if pkgSet is not None and len(pkgSet) > 0:
+        for pkg in pkgSet:
+            if pkg.endswith(r'.' + clz):
+                pkgname = pkg
+                break  # current we match 1st one, but not best one
+    print('getBestPackageName [ ' + pkgname + ' ] for clz [ ' + clz + ' ]')
+    return [pkgname.replace(r'.' + clz, ''), pkgname]
+
+def guessHeaderFromClassName(clz, includedHeaderSet):
+    hdfile = ''
+    if includedHeaderSet is not None and len(includedHeaderSet) > 0:
+        for hd in includedHeaderSet:
+            if hd.endswith(clz + '.h'):
+                hdfile = hd
+                break # current we match 1st one, but not best one
+    return hdfile
+
 def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, excluded_class, key_class, depth):
-    dict_filename_classname = {}
-    dict_class_parent = {}
-    dict_class_interface = {}
-    list_class_def = []
-    dict_class_reliedclass = {}
+    dict_filename_classid = {}
+    dict_classid_parentid = {}
+    dict_classid_interfaceid = {}
+    list_classid_def = []
+    set_classname = set()
+    dict_classid_reliedclass = {}
 
-    dict_filename_classname__cpp = {}
-    dict_class_parent__cpp = {}
-    list_class_def__cpp = []
-    dict_class_reliedclass__cpp = {}
+    dict_filename_classid__cpp = {}
+    dict_classid_parentid__cpp = {}
+    list_classid_def__cpp = []
+    set_classname__cpp = set()
+    dict_classid_reliedclassidSet__cpp = {}
 
-    dict_classname_treenode = {}
-    dict_classname_treenode__cpp = {}
+    dict_classid_treenode = {}
+    dict_classid_treenode__cpp = {}
+
+    dict_classid_filename__cpp = {}
+
+    key_class_id = None
 
     for jc in included_java_class:
-        nd = TreeNode(jc)
-        dict_classname_treenode[jc] = nd
+        nd = TreeNode(jc, 'null_file')
+        dict_classid_treenode[nd.get_id()] = nd
+        set_classname.add(nd.get_classname())
+        if jc == key_class:
+            key_class_id = nd.get_id()
     for cc in included_cpp_class:
-        nd = TreeNode(cc)
-        dict_classname_treenode__cpp[cc] = nd
+        nd = TreeNode(cc, 'null_file')
+        dict_classid_treenode__cpp[nd.get_id()] = nd
+        set_classname__cpp.add(nd.get_classname())
+        if cc == key_class:
+            key_class_id = nd.get_id()
 
+    # 1st scanning, parse all class
+
+    # 2nd scanning, create relationship
     for root_dir in sRootDir:
         for root, subdirs, files in os.walk(root_dir):
             print('file tree \t' + str(files))
@@ -240,11 +284,21 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
                 if filename.find('.java') > 0:
                     filepath = os.path.join(root, filename)
                     f = open(filepath, 'r')
-                    classname = ''
+                    currentPkg = ''
+                    importedPkgSet = set()
                     for line in f:
-                        if line.strip().startswith('import') or \
+                        classname = ''
+                        line_classid = ''
+                        line_parentid = ''
+                        line_interfaceid = ''
+                        if line.strip().startswith('package') or \
+                        line.strip().startswith('import') or \
                         line.strip().startswith(r'/') or \
                         line.strip().startswith(r'*'):
+                            if line.strip().startswith('package'):
+                                currentPkg = line.strip().replace(r'package', '').replace(r';','').strip()
+                            elif line.strip().startswith('import'):
+                                importedPkgSet.add(line.strip().replace(r'import', '').replace(r';','').strip())
                             continue
                         elif re.match(PATTERN_CLASS_WITH_PARENT, line) or re.match(PATTERN_CLASS_IMPLEMENT_INTERFACE, line):
                             if re.match(PATTERN_CLASS_WITH_PARENT, line):
@@ -259,25 +313,32 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
                                         parentname = parentname[:parentname.index(r'{')]
                                     except:
                                         pass
+                                    parentpkgname = getBestPackageName(parentname, importedPkgSet, currentPkg)
                                     should_link = True
                                     if len(classname) > 0 and fliter_clz(classname,excluded_class):
-                                        dict_filename_classname[filename] = classname
-                                        if classname not in dict_classname_treenode.keys():
-                                            nd = TreeNode(classname)
-                                            dict_classname_treenode[classname] = nd
+                                        nd = TreeNode(classname, filepath, currentPkg)
+                                        line_classid = nd.get_id()
+                                        if line_classid not in dict_classid_treenode.keys():
+                                            dict_classid_treenode[line_classid] = nd
+                                            set_classname.add(classname)
+                                            key_class_id = line_classid if classname == key_class else key_class_id
+                                        dict_filename_classid[filename] = line_classid
                                     else:
                                         should_link = False
                                     if mode.find('c') >= 0 and len(parentname) > 0 and fliter_clz(parentname,excluded_class):
-                                        if parentname not in dict_classname_treenode.keys():
-                                            nd = TreeNode(parentname)
-                                            dict_classname_treenode[parentname] = nd
+                                        nd = TreeNode(parentname, '', parentpkgname[0])
+                                        line_parentid = nd.get_id()
+                                        if line_parentid not in dict_classid_treenode.keys():
+                                            dict_classid_treenode[line_parentid] = nd
+                                            set_classname.add(parentname)
+                                            key_class_id = line_parentid if parentname == key_class else key_class_id
                                     else:
                                         should_link = False
                                     if should_link:
-                                        dict_class_parent[classname] = parentname
+                                        dict_classid_parentid[line_classid] = line_parentid
 
-                                        dict_classname_treenode.get(classname).add_parent(parentname)
-                                        dict_classname_treenode.get(parentname).add_child(classname)
+                                        dict_classid_treenode.get(line_classid).add_parent(line_parentid)
+                                        dict_classid_treenode.get(line_parentid).add_child(line_classid)
                                     else:
                                         CACHED_INFO.append('drop inherit relationship ' + classname + ' --▷ ' + parentname)
 
@@ -298,28 +359,35 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
                                     classname = classname.strip()
                                     should_link = True
                                     if len(classname) > 0 and fliter_clz(classname,excluded_class):
-                                        dict_filename_classname[filename] = classname
-                                        if classname not in dict_classname_treenode.keys():
-                                            nd = TreeNode(classname)
-                                            dict_classname_treenode[classname] = nd
+                                        nd = TreeNode(classname, filepath, currentPkg)
+                                        line_classid = nd.get_id()
+                                        if line_classid not in dict_classid_treenode.keys():
+                                            dict_classid_treenode[line_classid] = nd
+                                            set_classname.add(classname)
+                                            key_class_id = line_classid if classname == key_class else key_class_id
+                                        dict_filename_classid[filename] = line_classid
                                     else:
                                         should_link = False
                                     
                                     for interface in interfaces.split(r','):
                                         interface = interface.strip()
+                                        interfacepkgname = getBestPackageName(interface, importedPkgSet, currentPkg)
                                         if mode.find('i') >= 0 and fliter_clz(interface,excluded_class):
-                                            if interface not in dict_classname_treenode.keys():
-                                                nd = TreeNode(interface)
-                                                dict_classname_treenode[interface] = nd
+                                            nd = TreeNode(interface, '', interfacepkgname[0])
+                                            line_interfaceid = nd.get_id()
+                                            if line_interfaceid not in dict_classid_treenode.keys():
+                                                dict_classid_treenode[line_interfaceid] = nd
+                                                set_classname.add(interface)
+                                                key_class_id = line_interfaceid if interface == key_class else key_class_id
                                         else:
                                             should_link = False
                                         if should_link:
-                                            dict_class_interface[classname] = interface
+                                            dict_classid_interfaceid[line_classid] = line_interfaceid
 
-                                            dict_classname_treenode.get(classname).add_interface(interface)
-                                            dict_classname_treenode.get(interface).add_implement(classname)
+                                            dict_classid_treenode.get(line_classid).add_interface(line_interfaceid)
+                                            dict_classid_treenode.get(line_interfaceid).add_implement(line_classid)
                                         else:
-                                            CACHED_INFO.append('drop interface relationship ' + classname + ' --▷ ' + interface)
+                                            CACHED_INFO.append('drop interface relationship ' + line_classid + ' --▷ ' + line_interfaceid)
                                 except Exception as e:
                                     print('PATTERN_CLASS_IMPLEMENT_INTERFACE except\n\t' + str(e))
                             break
@@ -330,25 +398,39 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
                             except Exception as e:
                                 print('PATTERN_CLASS_DEFINE except\n\t' + str(e))
                             if len(classname) > 0 and fliter_clz(classname,excluded_class):
-                                list_class_def.append(classname)
-                                dict_filename_classname[filename] = classname
-                                if classname not in dict_classname_treenode.keys():
-                                    nd = TreeNode(classname)
-                                    dict_classname_treenode[classname] = nd
+                                nd = TreeNode(classname, filepath, currentPkg)
+                                line_classid = nd.get_id()
+                                list_classid_def.append(line_classid)
+                                dict_filename_classid[filename] = line_classid
+                                if line_classid not in dict_classid_treenode.keys():
+                                    dict_classid_treenode[line_classid] = nd
+                                    set_classname.add(classname)
+                                    key_class_id = line_classid if classname == key_class else key_class_id
                             break
                     f.close()
                 elif filename.endswith('.h') > 0:
                     filepath = os.path.join(root, filename)
                     f = open(filepath, 'r')
-                    classname = ''
+                    includedHeaderSet = set()
+                    ns_util = NameSpaceUtil()
                     for line in f:
+                        classname = ''
+                        line_h_classid = ''
+                        line_h_parentid = ''
                         line = line.lstrip()
                         if line.startswith('#') or line.startswith(r'/') or line.startswith(r'*'):
-                            pass
-                        elif re.match(PATTERN_CLASS_WITH_PARENT__CPP, line):
+                            if line.strip().startswith('#include '):
+                                includedHeaderSet.add(line.strip().replace(r'#include ', '').replace(r'"','').replace(r'<', '').replace(r'>', '').strip())
+                            continue
+                        ns_util.pushpop(line)
+                        print('fsdlkfjldjfsl --- pre begin ' + str(line))
+                        if re.match(PATTERN_CLASS_WITH_PARENT__CPP, line):
+                            print('fsdlkfjldjfsl --- begin ' + str(line))
                             try:
                                 classname = re.search(KEYWORD_CLASS + '(.*)' + KEYWORD_EXTEND__CPP, line).group(1).strip()
+                                print('fsdlkfjldjfsl --- begin get class name' + str(classname))
                                 parentname_multi = re.search(KEYWORD_EXTEND__CPP + '(.*)', line).group(1).lstrip()
+                                print('fsdlkfjldjfsl --- begin get parenetname name' + str(parentname_multi))
                                 try:
                                     parentname_multi = parentname_multi[:parentname_multi.index(r'\n')]
                                 except:
@@ -375,10 +457,15 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
                                     pass
                                 should_link = True
                                 if len(classname) > 0 and fliter_clz(classname,excluded_class):
-                                    dict_filename_classname__cpp[filename] = classname
-                                    if classname not in dict_classname_treenode__cpp.keys():
-                                        nd = TreeNode(classname)
-                                        dict_classname_treenode__cpp[classname] = nd
+                                    ns = ns_util.getNamespace()
+                                    nd = TreeNode(classname, filepath, ns)
+                                    line_h_classid = nd.get_id()
+                                    dict_filename_classid__cpp[filename] = line_h_classid
+                                    if line_h_classid not in dict_classid_treenode__cpp.keys():
+                                        dict_classid_treenode__cpp[line_h_classid] = nd
+                                        set_classname__cpp.add(classname)
+                                        key_class_id = line_h_classid if classname == key_class else key_class_id
+                                        dict_classid_filename__cpp[line_h_classid] = filename
                                 else:
                                     should_link = False
                                 if should_link:
@@ -386,23 +473,26 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
                                     for parentname in parentnames:
                                         parentname = parentname.strip()
                                         if mode.find('c') >= 0 and len(parentname) > 0 and fliter_clz(parentname,excluded_class):
-                                            if parentname not in dict_classname_treenode__cpp.keys():
-                                                nd = TreeNode(parentname)
-                                                dict_classname_treenode__cpp[parentname] = nd
+                                            nd = TreeNode(parentname, guessHeaderFromClassName(parentname, includedHeaderSet))
+                                            line_h_parentid = nd.get_id()
+                                            if line_h_parentid not in dict_classid_treenode__cpp.keys():
+                                                dict_classid_treenode__cpp[line_h_parentid] = nd
+                                                set_classname__cpp.add(parentname)
+                                                key_class_id = line_h_parentid if parentname == key_class else key_class_id
                                         else:
                                             should_link = False
                                         if should_link:
-                                            dict_class_parent__cpp[classname] = parentname
-
-                                            dict_classname_treenode__cpp.get(classname).add_parent(parentname)
-                                            dict_classname_treenode__cpp.get(parentname).add_child(classname)
+                                            dict_classid_parentid__cpp[line_h_classid] = line_h_parentid
+                                            dict_classid_treenode__cpp.get(line_h_classid).add_parent(line_h_parentid)
+                                            dict_classid_treenode__cpp.get(line_h_parentid).add_child(line_h_classid)
+                                            print('create inherit relationship [cpp] ' + line_h_classid + ' --▷ ' + line_h_parentid)
                                         else:
-                                            CACHED_INFO.append('drop inherit relationship [cpp] ' + classname + ' --▷ ' + parentname)
+                                            CACHED_INFO.append('drop inherit relationship [cpp] ' + line_h_classid + ' --▷ ' + line_h_parentid)
                                 else:
                                     CACHED_INFO.append('drop inherit relationship [cpp] ' + classname + ' --▷ ' + parentname_multi)
-
+                                print('fsdlkfjldjfsl --- end ' + str(line))
                             except Exception as e:
-                                print('PATTERN_CLASS_WITH_PARENT__CPP except\n\t' + str(e))
+                                print('PATTERN_CLASS_WITH_PARENT__CPP [ ' + PATTERN_CLASS_WITH_PARENT__CPP + ' ] except\n\t' + str(e) + '\n\t in ' + line)
                             break
                         elif re.match(PATTERN_CLASS_DEFINE__CPP, line):
                             classname = re.search(KEYWORD_CLASS + '(.*)', line).group(1).strip()
@@ -415,22 +505,27 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
                             except Exception as e:
                                 print('PATTERN_CLASS_DEFINE__CPP except\n\t' + str(e))
                             if len(classname) > 0 and fliter_clz(classname,excluded_class):
-                                list_class_def__cpp.append(classname)
-                                dict_filename_classname__cpp[filename] = classname
-                                if classname not in dict_classname_treenode__cpp.keys():
-                                    nd = TreeNode(classname)
-                                    dict_classname_treenode__cpp[classname] = nd
+                                ns = ns_util.getNamespace()
+                                nd = TreeNode(classname, filepath, ns)
+                                line_h_classid = nd.get_id()
+                                list_classid_def__cpp.append(line_h_classid)
+                                dict_filename_classid__cpp[filename] = line_h_classid
+                                if line_h_classid not in dict_classid_treenode__cpp.keys():
+                                    dict_classid_treenode__cpp[line_h_classid] = nd
+                                    dict_classid_filename__cpp[line_h_classid] = filename
+                                    set_classname__cpp.add(classname)
+                                    key_class_id = line_h_classid if classname == key_class else key_class_id
                             break
                     f.close()
-    print('='*10 + '\tmapping of filename - classname begin\t' + '='*10)
+    print('='*10 + '\tmapping of filename - class id begin\t' + '='*10)
     print('-'*10 + '\tjava\t' + '-'*10)
-    for filename in dict_filename_classname:
-        print(filename + ' : ' + dict_filename_classname[filename])
+    for filename in dict_filename_classid:
+        print(filename + ' : ' + dict_filename_classid[filename])
     print('-'*10 + '\tc++\t' + '-'*10)
-    for filename in dict_filename_classname__cpp:
-        print(filename + ' : ' + dict_filename_classname__cpp[filename])
-    print('='*10 + '\tmapping of filename - classname end\t' + '='*10)
-    if (len(dict_classname_treenode) > 0 or len(dict_classname_treenode__cpp) > 0) and mode.find('r') >= 0:
+    for filename in dict_filename_classid__cpp:
+        print(filename + ' : ' + dict_filename_classid__cpp[filename])
+    print('='*10 + '\tmapping of filename - class id end\t' + '='*10)
+    if (len(dict_classid_treenode) > 0 or len(dict_classid_treenode__cpp) > 0) and mode.find('r') >= 0:
         for root_dir in sRootDir:
             for root, subdirs, files in os.walk(root_dir):
                 print('tree \t' + str(files))
@@ -445,32 +540,36 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
                         buff = re.sub(PATTERN_CLASS_IMPLEMENT_INTERFACE + '.*\n?', '', buff)
                         buff = re.sub(r'import ' + '.*\n?', '', buff)
                         f.close()
-                        set_reliedclass = set()
+                        set_reliedclassid = set()
 
-                        fclass = dict_filename_classname.get(filename)
+                        fclassid = dict_filename_classid.get(filename)
 
-                        if fclass is None:
+                        if fclassid is None:
                             print('skip due to no class defined in ' + filename)
                             continue
 
-                        if fclass not in dict_classname_treenode:
-                            nd = TreeNode(fclass)
-                            dict_classname_treenode[fclass] = nd
-                        nd_fclass = dict_classname_treenode.get(fclass)
+                        if fclassid not in dict_classid_treenode:
+                            print('should not happen [' + filename + ' [' + fclassid)
+                            # nd = TreeNode(fclassid, filepath)
+                            # dict_classid_treenode[fclassid] = nd
+                            # key_class_id = line_classid if classname == key_class else key_class_id
+                            # set_classname.add(nd.get_classname())
+                        nd_fclassid = dict_classid_treenode.get(fclassid)
 
-                        for clz in dict_classname_treenode:
+                        for clzid in dict_classid_treenode:
+                            clz = dict_classid_treenode.get(clzid).get_classname()
                             pat = r"\ " + clz + r"\.|new\ " + clz + r"|\"[a-zA-Z]+\." + clz + r"\"" + r"|"+ clz + "\ +[a-zA-Z_]+\ +=" + r"|" + clz + r"\.class"
                             #print('debug : ' + pat)
                             # \ Intent\.|new Intent
                             if re.search(pat, buff):
-                                set_reliedclass.add(clz)
+                                set_reliedclassid.add(clzid)
                                 # clz's node has created already
-                                nd_clz = dict_classname_treenode.get(clz)
-                                print('\t find relied class ' + nd_clz.name)
-                                nd_clz.add_lchild(fclass)
-                                nd_fclass.add_rchild(clz)
-                        dict_class_reliedclass[fclass] = set_reliedclass
-                        if len(set_reliedclass) < 1:
+                                nd_clz = dict_classid_treenode.get(clzid)
+                                print('\t find relied class ' + nd_clz.get_classname())
+                                nd_clz.add_lchild(fclassid)
+                                nd_fclassid.add_rchild(clzid)
+                        dict_classid_reliedclass[fclassid] = set_reliedclassid
+                        if len(set_reliedclassid) < 1:
                             print('\t no relied class')
                     elif filename.endswith('.h'):
                         filepath = os.path.join(root, filename)
@@ -481,34 +580,36 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
                         buff = re.sub(PATTERN_CLASS_WITH_PARENT__CPP + '.*\n?', '', buff)
                         buff = re.sub(r'include ' + '.*\n?', '', buff)
                         f.close()
-                        set_reliedclass = set()
+                        set_reliedclassid = set()
 
-                        fclass = dict_filename_classname__cpp.get(filename)
+                        fclassid = dict_filename_classid__cpp.get(filename)
 
-                        if fclass is None:
+                        if fclassid is None:
                             print('skip due to no class defined in ' + filename)
                             continue
 
-                        if fclass not in dict_classname_treenode__cpp:
-                            nd = TreeNode(fclass)
-                            dict_classname_treenode__cpp[fclass] = nd
-                        nd_fclass = dict_classname_treenode__cpp.get(fclass)
+                        if fclassid not in dict_classid_treenode__cpp:
+                            nd = TreeNode(fclassid, filepath)
+                            dict_classid_treenode__cpp[fclassid] = nd
+                            set_classname__cpp.add(nd.get_classname())
+                        nd_fclassid = dict_classid_treenode__cpp.get(fclassid)
 
-                        if dict_class_reliedclass__cpp.get(fclass) is not None:
-                            set_reliedclass = dict_class_reliedclass__cpp.get(fclass)
+                        if dict_classid_reliedclassidSet__cpp.get(fclassid) is not None:
+                            set_reliedclassid = dict_classid_reliedclassidSet__cpp.get(fclassid)
 
-                        for clz in dict_classname_treenode__cpp:
+                        for clzid in dict_classid_treenode__cpp:
+                            clz = dict_classid_treenode__cpp.get(clzid).get_classname()
                             pat = r'\ *' + clz + r'(<\w+>)?' + r'\ *' + r'\*?' + r'\ *' + r'\w+' + r'\ *\w+\ *;' # member defined in header file
                             # \ Intent\.|new Intent
                             if re.search(pat, buff):
-                                set_reliedclass.add(clz)
+                                set_reliedclassid.add(clzid)
                                 # clz's node has created already
-                                nd_clz = dict_classname_treenode__cpp.get(clz)
-                                print('\t find relied class (member ship) ' + nd_clz.name)
-                                nd_clz.add_lchild(fclass)
-                                nd_fclass.add_rchild(clz)
-                        dict_class_reliedclass__cpp[fclass] = set_reliedclass
-                        if len(set_reliedclass) < 1:
+                                nd_clz = dict_classid_treenode__cpp.get(clzid)
+                                print('\t find relied class (member ship) ' + nd_clz.get_classname())
+                                nd_clz.add_lchild(fclassid)
+                                nd_fclassid.add_rchild(clzid)
+                        dict_classid_reliedclassidSet__cpp[fclassid] = set_reliedclassid
+                        if len(set_reliedclassid) < 1:
                             print('\t no relied class')
                     elif filename.endswith('.cpp'):
                         filepath = os.path.join(root, filename)
@@ -520,76 +621,83 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
                         buff = re.sub(r'include ' + '.*\n?', '', buff)
                         f.close()
 
-                        set_reliedclass = set()
+                        set_reliedclassid = set()
                         ismaincpp = False
 
                         # [TODO] we simply suppose header file always has same file name with cpp
-                        fclass = dict_filename_classname__cpp.get(filename.replace(r'.cpp', r'.h'))
+                        fclassid = dict_filename_classid__cpp.get(filename.replace(r'.cpp', r'.h'))
 
-                        if fclass is None:
+                        if fclassid is None:
                             # check if it's the main entry cpp file
                             #   - int main(
                             pat = r'int\ +main\ *\('
                             if re.search(pat, buff):
                                 ismaincpp = True
-                                fclass = filename.replace(r'.cpp', r'_cpp')
-                                if fclass in excluded_class:
-                                    print('skip due to ' + fclass + ' is excluded')
+                                fclassid = filename.replace(r'.cpp', r'_cpp')
+                                if fclassid in excluded_class:
+                                    print('skip due to ' + fclassid + ' is excluded')
                                     continue
                             else:
                                 print('skip due to no class defined in ' + filename)
                                 continue
                         else:
-                            print('\t checking class ' + fclass)
+                            print('\t checking class ' + fclassid)
 
-                        if fclass not in dict_classname_treenode__cpp:
-                            nd = TreeNode(fclass)
-                            dict_classname_treenode__cpp[fclass] = nd
-                        nd_fclass = dict_classname_treenode__cpp.get(fclass)
+                        if fclassid not in dict_classid_treenode__cpp:
+                            nd = TreeNode(fclassid, filepath)
+                            dict_classid_treenode__cpp[fclassid] = nd
+                            set_classname__cpp.add(nd.get_classname())
+                        nd_fclassid = dict_classid_treenode__cpp.get(fclassid)
 
-                        if dict_class_reliedclass__cpp.get(fclass) is not None:
-                            set_reliedclass = dict_class_reliedclass__cpp.get(fclass)
+                        if dict_classid_reliedclassidSet__cpp.get(fclassid) is not None:
+                            set_reliedclassid = dict_classid_reliedclassidSet__cpp.get(fclassid)
 
-                        for clz in dict_classname_treenode__cpp:
+                        for clz_id in dict_classid_treenode__cpp:
+                            clz = dict_classid_treenode__cpp.get(clz_id).get_classname()
                             pat = r'new\ +' + r'(\w*::)?' + clz # new class instance in cpp
                                                                 # only care about new instance, as invoke relation ship is to complex
                             if ismaincpp:
                                 pat = pat + r'|' + clz + r'::' + r'|' + clz + r'\ +' + r'|' + r'<' + clz + r'>'
                             # \ Intent\.|new Intent
-                            if re.search(pat, buff) and clz != fclass:
-                                set_reliedclass.add(clz)
+                            if re.search(pat, buff) and clz != nd_fclassid.get_classname():
+                                set_reliedclassid.add(clz_id)
                                 # clz's node has created already
-                                nd_clz = dict_classname_treenode__cpp.get(clz)
+                                nd_clz = dict_classid_treenode__cpp.get(clz_id)
                                 print('\t find relied class (new instance) ' + nd_clz.name)
-                                nd_clz.add_lchild(fclass)
-                                nd_fclass.add_rchild(clz)
-                        dict_class_reliedclass__cpp[fclass] = set_reliedclass
-                        if len(set_reliedclass) < 1:
+                                nd_clz.add_lchild(fclassid)
+                                nd_fclassid.add_rchild(clz_id)
+                        dict_classid_reliedclassidSet__cpp[fclassid] = set_reliedclassid
+                        if len(set_reliedclassid) < 1:
                             print('\t no relied class')
 
-    #print(dict_class_reliedclass)
+    #print(dict_classid_reliedclass)
     mClzRelationShips = ClzRelationShips()
     mClzRelationShips.set_var("root_dir", list(sRootDir)[0])
-    mClzRelationShips.set_var("dict_class_parent", dict_class_parent)
-    mClzRelationShips.set_var("dict_class_interface", dict_class_interface)
-    mClzRelationShips.set_var("dict_class_reliedclass", dict_class_reliedclass)
-    mClzRelationShips.set_var("dict_classname_treenode", dict_classname_treenode)
+    mClzRelationShips.set_var("dict_classid_parentid", dict_classid_parentid)
+    mClzRelationShips.set_var("dict_classid_interfaceid", dict_classid_interfaceid)
+    mClzRelationShips.set_var("dict_classid_reliedclass", dict_classid_reliedclass)
+    mClzRelationShips.set_var("dict_classid_treenode", dict_classid_treenode)
+    mClzRelationShips.set_var("set_classname", set_classname)
     mClzRelationShips.set_var("key_class", key_class)
+    mClzRelationShips.set_var("key_class_id", key_class_id)
+    print(dict_classid_treenode.get(key_class_id))
+    print('key class [' + key_class + '] with id [' + key_class_id + '] with class info [')
     mClzRelationShips.set_var("depth", depth)
     mClzRelationShips.set_var("lang", "java")
-    if len(dict_classname_treenode) > 0:
+    if len(dict_classid_treenode) > 0:
         draw_class_relationship(mClzRelationShips)
-    if len(dict_classname_treenode__cpp) > 0:
-        mClzRelationShips.set_var("dict_class_parent", dict_class_parent__cpp)
-        mClzRelationShips.set_var("dict_class_reliedclass", dict_class_reliedclass__cpp)
-        mClzRelationShips.set_var("dict_classname_treenode", dict_classname_treenode__cpp)
+    if len(dict_classid_treenode__cpp) > 0:
+        mClzRelationShips.set_var("dict_classid_parentid", dict_classid_parentid__cpp)
+        mClzRelationShips.set_var("dict_classid_reliedclass", dict_classid_reliedclassidSet__cpp)
+        mClzRelationShips.set_var("dict_classid_treenode", dict_classid_treenode__cpp)
+        mClzRelationShips.set_var("set_classname", set_classname__cpp)
         mClzRelationShips.set_var("lang", "cpp")
         draw_class_relationship(mClzRelationShips)
     if debug:
         print('dump ===================================================')
-        dump(dict_classname_treenode)
+        dump(dict_classid_treenode)
         print('dump ===================================================')
-        dump(dict_classname_treenode__cpp)
+        dump(dict_classid_treenode__cpp)
 
 
 def main(sRootDir, mode, included_java_class, included_cpp_class, excluded_class, key_class, depth):
