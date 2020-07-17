@@ -10,7 +10,7 @@ from clz import ClzRelationShips
 from util_namespace import NameSpaceUtil
 
 KEYWORD_PUBLIC = r"public"
-KEYWORD_ABSTRACT = r"(abstract\ +)?"
+KEYWORD_ABSTRACT = r"(final\ +)?(abstract\ +)?(final\ +)?"
 KEYWORD_CLASS = r"class"
 PATTERN_CLASS_NAME = r"[0-9a-zA-Z_\.]*(<[0-9a-zA-Z_\.]*>)?"
 KEYWORD_EXTEND = r'extends'
@@ -34,7 +34,7 @@ PATTERN_CLASS_DEFINE = KEYWORD_PUBLIC + SPLIT_SPACE + \
                        KEYWORD_CLASS + SPLIT_SPACE + \
                        PATTERN_CLASS_NAME + SPLIT_SPACE_RETURN
 
-PATTERN_CLASS_IMPLEMENT_INTERFACE = r'public class [0-9a-zA-Z_\.]*(<[0-9a-zA-Z_\.]*>)? \w*\ *[0-9a-zA-Z_\.]*(<[0-9a-zA-Z_\.]*>)? implements ([0-9a-zA-Z_\.]*(<[0-9a-zA-Z_\.]*>)?(,)?\ *)+\ *({|,|\n)'
+PATTERN_CLASS_IMPLEMENT_INTERFACE = r'public\ *(final)?\ *class [0-9a-zA-Z_\.]*(<[0-9a-zA-Z_\.]*>)? \w*\ *[0-9a-zA-Z_\.]*(<[0-9a-zA-Z_\.]*>)? implements ([0-9a-zA-Z_\.]*(<[0-9a-zA-Z_\.]*>)?(,)?\ *)+\ *({|,|\n)'
 #r'public class [0-9a-zA-Z_\.]*(<[0-9a-zA-Z_\.]*>)? \w*\ *[0-9a-zA-Z_\.]*(<[0-9a-zA-Z_\.]*>)? implements ([0-9a-zA-Z_\.]*(<[0-9a-zA-Z_\.]*>)?(,)?\ *)+\ *{'
 
 # class\ +[0-9a-zA-Z_\.]*(<[0-9a-zA-Z_\.]*>)?\ *:\ *(\ *public\ *|\ *protected\ *|\ *private\ *)?[0-9a-zA-Z_\.]*(<[0-9a-zA-Z_\.]*>)?(\ *,\ *(\ *public\ *|\ *protected\ *|\ *private\ *)?[0-9a-zA-Z_\.]*(<[0-9a-zA-Z_\.]*>)?)*\ *\n*\ *{
@@ -680,8 +680,9 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
     mClzRelationShips.set_var("set_classname", set_classname)
     mClzRelationShips.set_var("key_class", key_class)
     mClzRelationShips.set_var("key_class_id", key_class_id)
-    print(dict_classid_treenode.get(key_class_id))
-    print('key class [' + key_class + '] with id [' + key_class_id + '] with class info [')
+    if key_class is not None:
+        print(dict_classid_treenode.get(key_class_id))
+        print('key class [' + key_class + '] with id [' + key_class_id + '] with class info [')
     mClzRelationShips.set_var("depth", depth)
     mClzRelationShips.set_var("lang", "java")
     if len(dict_classid_treenode) > 0:

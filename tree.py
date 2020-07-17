@@ -37,9 +37,10 @@ class TreeNode:
         self.displayname = self.name.replace('.', '・').replace('<', '‹').replace('>', '›').replace('/', '_').replace(':','∶')
         self.displayid = self.id.replace('.', '・').replace('<', '‹').replace('>', '›').replace('/', '_').replace(':','∶')
         self.displayns = self.namespace.replace('.', '・').replace('<', '‹').replace('>', '›').replace('/', '_').replace(':','∶')
-        ### disable namespace
-        self.displayid = self.displayname
-        self.displayns = ''
+        ### disable namespace for cpp
+        if not file.endswith(r'.java'):
+            self.displayid = self.displayname
+            self.displayns = ''
         # fixme, we cannot decide rely class whether is under ns or under which ns 
         # if len(ns) > 1:
         #     ns = ns.replace(r'::', '_')
