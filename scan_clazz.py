@@ -69,6 +69,9 @@ CLASS_EXCLUDED_ALWAYS = [
     r'AbstractCursor',
     r'State',
     r'*Test',
+    r'Preference',
+    r'PreferenceGroup',
+    r'CheckBoxPreference',
 ]
 
 CACHED_INFO = []
