@@ -413,7 +413,7 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
                     f.close()
                 elif filename.endswith('.h') > 0:
                     filepath = os.path.join(root, filename)
-                    f = open(filepath, 'r')
+                    f = open(filepath, 'r', encoding="utf-8")
                     includedHeaderSet = set()
                     ns_util = NameSpaceUtil()
                     for line in f:
