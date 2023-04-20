@@ -29,10 +29,11 @@ class NameSpaceUtil(object):
             print('push {')
             self.stack.append(r'{')
         if tmp.find(r'}') >= 0:
-            # print('pop ' + self.stack[-1])
-            # print('pop before ' + str(self.stack))
-            print('pop ' + self.stack[-1])
-            self.stack.pop()
+            if len(self.stack) > 0:
+                # print('pop ' + self.stack[-1])
+                # print('pop before ' + str(self.stack))
+                print('pop ' + self.stack[-1])
+                self.stack.pop()
 
     def getNamespace(self):
         # print('try to getNamespace')
