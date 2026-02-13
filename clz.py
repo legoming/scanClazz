@@ -23,14 +23,16 @@ class ClzRelationShips:
         if arg_type in DicArgvTypes.keys() and str(type(arg_value)) == DicArgvTypes.get(arg_type):
             self.argvs[arg_type] = arg_value
         else:
-            print(str(type(arg_value)))
-            print('ClzRelationShips error: ' + arg_type + ' ' + str(arg_value) + ' is invalid')
+            import logging
+            logging.debug(str(type(arg_value)))
+            logging.error('ClzRelationShips error: %s %s is invalid', arg_type, str(arg_value))
 
     def get_var(self, arg_type):
         if arg_type in DicArgvTypes.keys():
             return self.argvs.get(arg_type)
         else:
-            print('ClzRelationShips error: ' + arg_type + ' cannot be found in argvs')
+            import logging
+            logging.error('ClzRelationShips error: %s cannot be found in argvs', arg_type)
             return None
 
 
