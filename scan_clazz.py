@@ -458,13 +458,35 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
                     except Exception as e:
                         logging.debug('failed to open java file %s: %s', filepath, e)
                 elif filename.endswith('.kt'):
-                    # Kotlin source file - improved parser (handles modifiers, multi-line parent lists, generics, constructor params)
+                    # Kotlin source file - robust parser: ignore ':' inside constructor parameter lists or generics
                     filepath = os.path.join(root, filename)
                     try:
                         with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
                             lines = f.readlines()
                         currentPkg = ''
                         importedPkgSet = set()
+
+                        def _normalize_kt_type(p):
+                            if not p:
+                                return ''
+                            p = re.sub(r'<.*?>', '', p)  # remove generics
+                            p = re.sub(r'\(.*?\)', '', p)  # remove constructor args
+                            p = p.split()[0] if p.split() else p
+                            p = p.rstrip('?')
+                            p = re.sub(r'[^0-9A-Za-z_\.]', '', p)
+                            return p
+
+                        def _is_probable_type(name):
+                            if not name:
+                                return False
+                            primitives = {'Int','Long','Float','Double','Boolean','String','Char','Short','Byte','Any','Unit'}
+                            keywords = {'var','val','params','override','private','public','internal'}
+                            if name in primitives or name in keywords:
+                                return False
+                            if '.' in name:
+                                return True
+                            return name[0].isupper()
+
                         for idx, rawline in enumerate(lines):
                             line = rawline.strip()
                             if len(line) < 1:
@@ -475,47 +497,66 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
                             if line.startswith('import'):
                                 importedPkgSet.add(line.replace('import', '').replace(';', '').strip())
                                 continue
-                            # skip comments
                             if line.startswith('//') or line.startswith('/*') or line.startswith('*'):
                                 continue
-                            # look for class/interface/object/enum keywords
                             m = re.search(r"\b(class|interface|object|enum)\s+([A-Za-z_][A-Za-z0-9_\.<>]*)", line)
                             if not m:
-                                # sometimes modifiers like 'data' or 'sealed' precede class; try a broader match
                                 m = re.search(r"(?:data|sealed|open|abstract|inner|private|public|internal)\s+(class|interface|object|enum)\s+([A-Za-z_][A-Za-z0-9_\.<>]*)", line)
+                            # fallback: try a small snippet spanning several following lines (handles annotations or constructor keywords)
+                            if not m:
+                                snippet = ' '.join([lines[j].strip() for j in range(idx, min(idx+6, len(lines)))])
+                                m_snip = re.search(r"\b(class|interface|object|enum)\s+([A-Za-z_][A-Za-z0-9_]*)", snippet)
+                                if m_snip:
+                                    m = m_snip
+                            # fallback: annotation or 'constructor' may appear after classname; try a simpler classname capture
+                            if not m:
+                                m2 = re.search(r"\b(class|interface|object|enum)\s+([A-Za-z_][A-Za-z0-9_]*)", line)
+                                if m2:
+                                    m = m2
                             if m:
                                 try:
                                     classname = m.group(2)
                                     classname_plain = re.sub(r'<.*?>', '', classname)
-                                    # gather remainder of this line plus a few following lines to capture multi-line parent lists
                                     rest = line[m.end():]
                                     lookahead = 1
-                                    while (':' not in rest and '{' not in rest and lookahead <= 5 and idx+lookahead < len(lines)):
+                                    # gather a small snippet ahead; do NOT stop on ':' because constructor params contain ':'
+                                    while ('{' not in rest and lookahead <= 8 and idx+lookahead < len(lines)):
                                         rest += ' ' + lines[idx+lookahead].strip()
                                         lookahead += 1
+                                    # find ':' that is not inside parentheses or angle brackets
+                                    colon_index = -1
+                                    paren_depth = 0
+                                    angle_depth = 0
+                                    for i, ch in enumerate(rest):
+                                        if ch == '(':
+                                            paren_depth += 1
+                                        elif ch == ')':
+                                            if paren_depth > 0:
+                                                paren_depth -= 1
+                                        elif ch == '<':
+                                            angle_depth += 1
+                                        elif ch == '>':
+                                            if angle_depth > 0:
+                                                angle_depth -= 1
+                                        elif ch == ':' and paren_depth == 0 and angle_depth == 0:
+                                            colon_index = i
+                                            break
                                     parent_list = []
-                                    if ':' in rest:
-                                        # take substring after first ':' up to '{' or 'where' or comment
-                                        parent_part = rest.split(':', 1)[1]
+                                    if colon_index != -1:
+                                        parent_part = rest[colon_index+1:]
                                         parent_part = re.split(r'\{|//|\bwhere\b', parent_part, 1)[0]
-                                        # split by comma into parent entries
                                         for p in parent_part.split(','):
                                             p = p.strip()
                                             if not p:
                                                 continue
-                                            # strip generics and constructor args
-                                            p = re.sub(r'<.*?>', '', p)
-                                            p = re.sub(r'\(.*?\)', '', p)
-                                            # split on whitespace to get the type/identifier
-                                            p = p.split()[0].strip()
-                                            # remove trailing symbols
-                                            p = p.strip(':{}()')
+                                            p = _normalize_kt_type(p)
                                             if p:
                                                 parent_list.append(p)
                                     should_link = True
                                     if len(classname_plain) > 0 and fliter_clz(classname_plain, excluded_class):
                                         nd = TreeNode(classname_plain, filepath, currentPkg, origin='kotlin')
                                         line_classid = nd.get_id()
+                                        logging.debug('kotlin found class %s in %s (id=%s)', classname_plain, filename, line_classid)
                                         if line_classid not in dict_classid_treenode.keys():
                                             dict_classid_treenode[line_classid] = nd
                                             set_classname.add(classname_plain)
@@ -525,21 +566,31 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
                                         should_link = False
 
                                     if should_link and len(parent_list) > 0 and mode.find('c') >= 0:
-                                        for parent in parent_list:
-                                            parent = parent.strip()
-                                            if len(parent) < 1:
+                                        # In Kotlin the first entry after ':' (if any) is the superclass (may include constructor args)
+                                        # subsequent entries are interfaces. Map them accordingly.
+                                        for idx_p, parent in enumerate(parent_list):
+                                            if not _is_probable_type(parent):
+                                                logging.debug('skip kotlin parent not-a-type: %s', parent)
                                                 continue
-                                            if fliter_clz(parent, excluded_class):
-                                                parentpkg = getBestPackageName(parent, importedPkgSet, currentPkg)
-                                                ndp = TreeNode(parent, '', parentpkg[0], origin='kotlin')
-                                                line_parentid = ndp.get_id()
-                                                if line_parentid not in dict_classid_treenode.keys():
-                                                    dict_classid_treenode[line_parentid] = ndp
-                                                    set_classname.add(parent)
-                                                    key_class_id = line_parentid if parent == key_class else key_class_id
+                                            if not fliter_clz(parent, excluded_class):
+                                                continue
+                                            parentpkg = getBestPackageName(parent, importedPkgSet, currentPkg)
+                                            ndp = TreeNode(parent, '', parentpkg[0], origin='kotlin')
+                                            line_parentid = ndp.get_id()
+                                            if line_parentid not in dict_classid_treenode.keys():
+                                                dict_classid_treenode[line_parentid] = ndp
+                                                set_classname.add(parent)
+                                                key_class_id = line_parentid if parent == key_class else key_class_id
+                                            if idx_p == 0:
+                                                # superclass (inherit)
                                                 dict_classid_parentid[line_classid] = line_parentid
                                                 dict_classid_treenode.get(line_classid).add_parent(line_parentid)
                                                 dict_classid_treenode.get(line_parentid).add_child(line_classid)
+                                            else:
+                                                # interface (implement)
+                                                dict_classid_interfaceid[line_classid] = line_parentid
+                                                dict_classid_treenode.get(line_classid).add_interface(line_parentid)
+                                                dict_classid_treenode.get(line_parentid).add_implement(line_classid)
                                 except Exception as e:
                                     logging.debug('Kotlin parse except %s in %s', e, line)
                                 # continue scanning after a class declaration
