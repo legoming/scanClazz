@@ -63,6 +63,7 @@ CLASS_EXCLUDED_ALWAYS = [
     r'BaseActivity',
     r'ListView',
     r'Fragment',
+    r'View',
     r'Dialog',
     r'DialogFragment',
     r'Service',
@@ -77,6 +78,27 @@ CLASS_EXCLUDED_ALWAYS = [
     r'Preference',
     r'PreferenceGroup',
     r'CheckBoxPreference',
+    r'class',
+    r'name',
+    r'and',
+    r'Intent',
+    r'String',
+    r'Set',
+    r'List',
+    r'Button',
+    r'ViewModel',
+    r'Preference',
+    r'Fragment',
+    r'for',
+    r'Parent',
+    r'Parcelable',
+    r'which',
+    r'LiveData',
+    r'JobService',
+    r'representing',
+    r'V',
+    r'Receiver',
+    r'Job',
 ]
 
 CACHED_INFO = []
@@ -125,7 +147,7 @@ def do_real_draw_if_possible(input, lang):
         if fdp_support:
             try:
                 logging.info('running fdp on %s -> %s', input, os.path.join(outpath, lang + 'graph-fdp.png'))
-                proc = subprocess.run([fdp_path, input, '-Gdpi=300', '-T', 'png', '-o', os.path.join(outpath, lang + 'graph-fdp.png')], check=False, capture_output=True, text=True)
+                proc = subprocess.run([fdp_path, input, '-Gdpi=150', '-T', 'png', '-o', os.path.join(outpath, lang + 'graph-fdp.png')], check=False, capture_output=True, text=True)
                 if proc.returncode == 0:
                     logging.info('fdp png: %s', os.path.join(outpath, lang + 'graph-fdp.png'))
                 else:
@@ -139,129 +161,165 @@ def do_real_draw_if_possible(input, lang):
 
 def draw_class_relationship(mClzRelationShips):
     root_dir = mClzRelationShips.get_var("root_dir")
-    dict_classid_parentid = mClzRelationShips.get_var("dict_classid_parentid")
-    dict_classid_interfaceid = mClzRelationShips.get_var("dict_classid_interfaceid")
-    dict_classid_reliedclass = mClzRelationShips.get_var("dict_classid_reliedclass")
-    dict_classid_treenode = mClzRelationShips.get_var("dict_classid_treenode")
-    set_classname = mClzRelationShips.get_var("set_classname")
+    dict_classid_parentid = mClzRelationShips.get_var("dict_classid_parentid") or {}
+    dict_classid_interfaceid = mClzRelationShips.get_var("dict_classid_interfaceid") or {}
+    dict_classid_reliedclass = mClzRelationShips.get_var("dict_classid_reliedclass") or {}
+    dict_classid_treenode = mClzRelationShips.get_var("dict_classid_treenode") or {}
+    set_classname = mClzRelationShips.get_var("set_classname") or set()
     key_class = mClzRelationShips.get_var("key_class")
     key_class_id = mClzRelationShips.get_var("key_class_id")
     depth = mClzRelationShips.get_var("depth")
     lang = mClzRelationShips.get_var("lang")
-    if dict_classid_treenode is not None and len(dict_classid_treenode) >0:
-        set_class_depth_exceeded = set()
 
-        out_file_path = os.path.join(root_dir, lang + 'output')
-        with open(out_file_path, 'w', encoding='utf-8', errors='ignore') as fo:
-            fo.write('# ' + ' '.join(sys.argv))
-            #fo.write('```graphviz')
-            fo.write('\ndigraph G {')
-            # helper to quote/escape identifiers and labels
-            def _q(s):
-                if s is None:
-                    return '""'
-                return '"' + str(s).replace('"', '\\"') + '"'
-            #fo.write('\nrankdir = LR')
+    if not dict_classid_treenode:
+        logging.debug('no nodes to draw')
+        return
 
-            haskey = True if key_class is not None and key_class in set_classname and key_class_id in dict_classid_treenode else False
-            key_nd = dict_classid_treenode.get(key_class_id)
-            logging.debug('key_nd = %s', str(key_nd))
+    def _q(s):
+        if s is None:
+            return '""'
+        return '"' + str(s).replace('"', '\\"') + '"'
 
-            for cls_id in dict_classid_treenode:
-                nd = dict_classid_treenode.get(cls_id)
-                if nd is not None and nd.is_valid_node():
-                    if nd.is_standalone():
-                        logging.debug('drop standalone %s', nd.id)
-                    elif nd.is_equal(key_class_id):
-                        fo.write('\n    ' + _q(nd.displayid) + ' [shape = egg color=green]')
-                    elif haskey and not key_nd.is_clz_relate_with_node_in_depth(cls_id, depth, dict_classid_treenode):
-                        set_class_depth_exceeded.add(cls_id)
-                        CACHED_INFO.append('drop depth exceeded ' + nd.id)
-                    elif nd.is_parent():
-                        logging.debug('parent node %s', nd.name)
-                        label = nd.displayname + r'\n[' + nd.displayns + ']'
-                        fo.write('\n    ' + _q(nd.displayid) + ' [shape = plaintext label=' + _q(label) + ']')
-                    elif nd.is_interface():
-                        logging.debug('interface node %s', nd.name)
-                        label = nd.displayname + r'\n[' + nd.displayns + ']'
-                        fo.write('\n    ' + _q(nd.displayid) + ' [shape = plaintext label=' + _q(label) + ']')
-                    elif nd.is_leaf():
-                        label = nd.displayname + r'\n[' + nd.displayns + ']'
-                        fo.write('\n    ' + _q(nd.displayid) + ' [shape = plaintext label=' + _q(label) + ']')
-                    else:
-                        label = nd.displayname + r'\n[' + nd.displayns + ']'
-                        fo.write('\n    ' + _q(nd.displayid) + ' [shape = note label=' + _q(label) + ']')
+    haskey = True if key_class is not None and key_class in set_classname and key_class_id in dict_classid_treenode else False
+    key_nd = dict_classid_treenode.get(key_class_id)
+
+    out_file_path = os.path.join(root_dir, lang + 'output')
+    nodes_in_edges = set()
+    set_class_depth_exceeded = set()
+
+    with open(out_file_path, 'w', encoding='utf-8', errors='ignore') as fo:
+        fo.write('# ' + ' '.join(sys.argv))
+        fo.write('\ndigraph G {')
+
+        # write nodes
+        for cls_id, nd in dict_classid_treenode.items():
+            if nd is None or not nd.is_valid_node():
+                continue
+            if nd.is_standalone():
+                logging.debug('drop standalone %s', nd.id)
+                continue
+            if nd.is_equal(key_class_id):
+                fo.write('\n    ' + _q(nd.displayid) + ' [shape = egg color=green]')
+            elif haskey and not key_nd.is_clz_relate_with_node_in_depth(cls_id, depth, dict_classid_treenode):
+                set_class_depth_exceeded.add(cls_id)
+                CACHED_INFO.append('drop depth exceeded ' + nd.id)
+            else:
+                label = nd.displayname + r'\n[' + nd.displayns + ']'
+                if nd.is_parent() or nd.is_interface() or nd.is_leaf():
+                    fo.write('\n    ' + _q(nd.displayid) + ' [shape = plaintext label=' + _q(label) + ']')
                 else:
-                    logging.debug('invalid node found')
-            if len(set_class_depth_exceeded) > 0:
-                for c in set_class_depth_exceeded:
-                    nc = dict_classid_treenode.get(c)
-                    if nc.parent is not None:
-                        dict_classid_treenode.get(nc.parent).childs.remove(c)
-                    for ic in nc.childs:
-                        dict_classid_treenode.get(ic).parent = None
-                    for lc in nc.lchild:
-                        dict_classid_treenode.get(lc).rchild.remove(c)
-                    for rc in nc.rchild:
-                        dict_classid_treenode.get(rc).lchild.remove(c)
-                    del dict_classid_treenode[c]
-            if dict_classid_parentid is not None and len(dict_classid_parentid) > 0:
-                for cls_id in dict_classid_parentid:
-                    if cls_id not in dict_classid_treenode.keys() or \
-                       dict_classid_parentid[cls_id] not in dict_classid_treenode.keys():
-                        CACHED_INFO.append('skip inherit "' + cls_id + '" --▷ "' + dict_classid_parentid[cls_id] + '"')
-                        continue
-                    if cls_id is not None and dict_classid_parentid[cls_id] is not None:
-                        cls_converted = dict_classid_treenode.get(cls_id).displayid
-                        pnt_converted = dict_classid_treenode.get(dict_classid_parentid[cls_id]).displayid
-                        fo.write('\n    ' + _q(cls_converted) + ' -> ' + _q(pnt_converted) + ' [arrowhead = empty color=purple]')
-            if dict_classid_interfaceid is not None and len(dict_classid_interfaceid) > 0:
-                for cls_id in dict_classid_interfaceid:
-                    if cls_id not in dict_classid_treenode.keys() or \
-                       dict_classid_interfaceid[cls_id] not in dict_classid_treenode.keys():
-                        CACHED_INFO.append('skip interface "' + cls_id + '" - -▷ "' + dict_classid_interfaceid[cls_id] + '"')
-                        continue
-                    if cls_id is not None and dict_classid_interfaceid[cls_id] is not None:
-                        cls_converted = dict_classid_treenode.get(cls_id).displayid
-                        pnt_converted = dict_classid_treenode.get(dict_classid_interfaceid[cls_id]).displayid
-                        fo.write('\n    ' + _q(cls_converted) + ' -> ' + _q(pnt_converted) + ' [arrowhead = empty color=purple style=dashed]')
-            if dict_classid_reliedclass is not None and len(dict_classid_reliedclass) > 0:
-                for cls_id in dict_classid_reliedclass:
-                    if cls_id is not None and cls_id in dict_classid_treenode:
-                        cls_converted = dict_classid_treenode.get(cls_id).displayid
-                        if dict_classid_reliedclass is not None:
-                            for relatedcls in dict_classid_reliedclass.get(cls_id):
-                                logging.debug('checking %s \"s relatedcls = %s', cls_id, str(relatedcls))
-                                if relatedcls not in dict_classid_treenode:
-                                    logging.debug('skipping %s \"s relatedcls = %s', cls_id, str(relatedcls))
-                                    CACHED_INFO.append('skip ' + cls_id + ' --> ' + relatedcls)
-                                    continue
-                                    if relatedcls != cls_id:
-                                        relatedcls_converted = dict_classid_treenode.get(relatedcls).displayid
-                                        if haskey and \
-                                                (key_nd.is_equal(cls_id) or
-                                                 key_nd.is_equal(relatedcls)):
-                                            logging.debug('writing (key) %s -> %s', cls_id, str(relatedcls))
-                                            fo.write('\n    ' + _q(cls_converted) + ' -> ' + _q(relatedcls_converted) + ' [style = dashed]')
-                                        elif haskey:
-                                            if cls_id not in set_class_depth_exceeded and \
-                                               relatedcls not in set_class_depth_exceeded:
-                                                logging.debug('writing (near) %s -> %s', cls_id, str(relatedcls))
-                                                fo.write('\n    ' + _q(cls_converted) + ' -> ' + _q(relatedcls_converted) + ' [style = dashed color = gray]')
-                                            else:
-                                                CACHED_INFO.append('drop relationship ' + cls_id + ' --> ' + relatedcls + ' due to depth exceed')
-                                        else:
-                                            logging.debug('writing %s -> %s', cls_id, str(relatedcls))
-                                            fo.write('\n    ' + _q(cls_converted) + ' -> ' + _q(relatedcls_converted) + ' [style = dashed]')
-                    else:
-                        CACHED_INFO.append('skip ' + cls_id + ' --> ...')
-            fo.write('\n}')
-            #fo.write('\n```')
-        logging.info('wrote graphviz output to %s', out_file_path)
+                    fo.write('\n    ' + _q(nd.displayid) + ' [shape = note label=' + _q(label) + ']')
+
+        # parent edges
+        for cls_id, p in dict_classid_parentid.items():
+            if cls_id not in dict_classid_treenode or p not in dict_classid_treenode:
+                CACHED_INFO.append('skip inherit "' + str(cls_id) + '" --▷ "' + str(p) + '"')
+                continue
+            if cls_id in set_class_depth_exceeded or p in set_class_depth_exceeded:
+                continue
+            cls_converted = dict_classid_treenode.get(cls_id).displayid
+            pnt_converted = dict_classid_treenode.get(p).displayid
+            fo.write('\n    ' + _q(cls_converted) + ' -> ' + _q(pnt_converted) + ' [arrowhead = empty color=purple]')
+            nodes_in_edges.add(cls_converted)
+            nodes_in_edges.add(pnt_converted)
+
+        # interface edges (support single or iterable)
+        for cls_id, ifs in dict_classid_interfaceid.items():
+            if cls_id not in dict_classid_treenode:
+                CACHED_INFO.append('skip interface owner "' + str(cls_id) + '"')
+                continue
+            if ifs is None:
+                continue
+            cls_converted = dict_classid_treenode.get(cls_id).displayid
+            iter_if = ifs if isinstance(ifs, (set, list, tuple)) else [ifs]
+            for iface in iter_if:
+                if iface not in dict_classid_treenode:
+                    CACHED_INFO.append('skip interface target "' + str(iface) + '" for owner "' + str(cls_id) + '"')
+                    continue
+                if cls_id in set_class_depth_exceeded or iface in set_class_depth_exceeded:
+                    continue
+                pnt_converted = dict_classid_treenode.get(iface).displayid
+                fo.write('\n    ' + _q(cls_converted) + ' -> ' + _q(pnt_converted) + ' [arrowhead = empty color=purple style=dashed]')
+                nodes_in_edges.add(cls_converted)
+                nodes_in_edges.add(pnt_converted)
+
+        # relied/related edges
+        for cls_id, relset in dict_classid_reliedclass.items():
+            if cls_id not in dict_classid_treenode:
+                CACHED_INFO.append('skip relations for missing owner ' + str(cls_id))
+                continue
+            if cls_id in set_class_depth_exceeded:
+                continue
+            cls_converted = dict_classid_treenode.get(cls_id).displayid
+            for relatedcls in relset:
+                if relatedcls not in dict_classid_treenode:
+                    CACHED_INFO.append('skip ' + str(cls_id) + ' --> ' + str(relatedcls))
+                    continue
+                if relatedcls == cls_id:
+                    continue
+                if relatedcls in set_class_depth_exceeded:
+                    continue
+                related_converted = dict_classid_treenode.get(relatedcls).displayid
+                fo.write('\n    ' + _q(cls_converted) + ' -> ' + _q(related_converted) + ' [style = dashed]')
+                nodes_in_edges.add(cls_converted)
+                nodes_in_edges.add(related_converted)
+
+        fo.write('\n}')
+
+    logging.info('wrote graphviz output to %s', out_file_path)
     for ln in CACHED_INFO:
         logging.info(ln)
+
     logging.info('\noutput: %s/%soutput', root_dir, lang)
     do_real_draw_if_possible(os.path.join(root_dir, lang + 'output'), lang)
+
+    # write filtered DOT for fdp (only nodes that appear in edges)
+    try:
+        filtered_path = os.path.join(root_dir, lang + 'output_fdp')
+        with open(filtered_path, 'w', encoding='utf-8', errors='ignore') as ffdp:
+            ffdp.write('# ' + ' '.join(sys.argv))
+            ffdp.write('\ndigraph G {')
+            # write only nodes that are part of edges
+            for cls_id, nd in dict_classid_treenode.items():
+                if nd is None or not nd.is_valid_node():
+                    continue
+                if nd.displayid not in nodes_in_edges:
+                    continue
+                if nd.is_equal(key_class_id):
+                    ffdp.write('\n    ' + _q(nd.displayid) + ' [shape = egg color=green]')
+                else:
+                    label = nd.displayname + r'\n[' + nd.displayns + ']'
+                    ffdp.write('\n    ' + _q(nd.displayid) + ' [shape = plaintext label=' + _q(label) + ']')
+
+            # edges (only those between participating nodes)
+            for cls_id, p in dict_classid_parentid.items():
+                if cls_id in dict_classid_treenode and p in dict_classid_treenode:
+                    c = dict_classid_treenode.get(cls_id).displayid
+                    pnt = dict_classid_treenode.get(p).displayid
+                    if c in nodes_in_edges and pnt in nodes_in_edges:
+                        ffdp.write('\n    ' + _q(c) + ' -> ' + _q(pnt) + ' [arrowhead = empty color=purple]')
+            for cls_id, ifs in dict_classid_interfaceid.items():
+                iter_if = ifs if isinstance(ifs, (set, list, tuple)) else [ifs]
+                for iface in iter_if:
+                    if cls_id in dict_classid_treenode and iface in dict_classid_treenode:
+                        c = dict_classid_treenode.get(cls_id).displayid
+                        pnt = dict_classid_treenode.get(iface).displayid
+                        if c in nodes_in_edges and pnt in nodes_in_edges:
+                            ffdp.write('\n    ' + _q(c) + ' -> ' + _q(pnt) + ' [arrowhead = empty color=purple style=dashed]')
+            for cls_id, relset in dict_classid_reliedclass.items():
+                if cls_id in dict_classid_treenode:
+                    c = dict_classid_treenode.get(cls_id).displayid
+                    for relatedcls in relset:
+                        if relatedcls in dict_classid_treenode:
+                            r = dict_classid_treenode.get(relatedcls).displayid
+                            if c in nodes_in_edges and r in nodes_in_edges:
+                                ffdp.write('\n    ' + _q(c) + ' -> ' + _q(r) + ' [style = dashed]')
+
+            ffdp.write('\n}')
+        logging.info('wrote filtered graphviz output to %s', filtered_path)
+        do_real_draw_if_possible(filtered_path, lang)
+    except Exception as e:
+        logging.debug('failed to write or render filtered fdp output: %s', e)
 
 def fliter_clz(clz, ex_clz_list):
     return True if clz not in ex_clz_list and not clz.endswith('Test') else False
@@ -430,7 +488,15 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
                                                 else:
                                                     should_link = False
                                                 if should_link:
-                                                    dict_classid_interfaceid[line_classid] = line_interfaceid
+                                                    # support multiple interfaces per class
+                                                    prev = dict_classid_interfaceid.get(line_classid)
+                                                    if prev is None:
+                                                        dict_classid_interfaceid[line_classid] = set([line_interfaceid])
+                                                    else:
+                                                        if isinstance(prev, set):
+                                                            prev.add(line_interfaceid)
+                                                        else:
+                                                            dict_classid_interfaceid[line_classid] = set([prev, line_interfaceid])
 
                                                     dict_classid_treenode.get(line_classid).add_interface(line_interfaceid)
                                                     dict_classid_treenode.get(line_interfaceid).add_implement(line_classid)
@@ -587,8 +653,15 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
                                                 dict_classid_treenode.get(line_classid).add_parent(line_parentid)
                                                 dict_classid_treenode.get(line_parentid).add_child(line_classid)
                                             else:
-                                                # interface (implement)
-                                                dict_classid_interfaceid[line_classid] = line_parentid
+                                                # interface (implement) - allow multiple
+                                                prev_if = dict_classid_interfaceid.get(line_classid)
+                                                if prev_if is None:
+                                                    dict_classid_interfaceid[line_classid] = set([line_parentid])
+                                                else:
+                                                    if isinstance(prev_if, set):
+                                                        prev_if.add(line_parentid)
+                                                    else:
+                                                        dict_classid_interfaceid[line_classid] = set([prev_if, line_parentid])
                                                 dict_classid_treenode.get(line_classid).add_interface(line_parentid)
                                                 dict_classid_treenode.get(line_parentid).add_implement(line_classid)
                                 except Exception as e:
@@ -962,7 +1035,19 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
     def _filter_map_single(src_map, nodes):
         if not src_map:
             return {}
-        return {k: v for k, v in src_map.items() if k in nodes and v in nodes}
+        out = {}
+        for k, v in src_map.items():
+            if k not in nodes:
+                continue
+            # support sets of values (multiple interfaces) or single-value maps
+            if isinstance(v, set):
+                filtered = {x for x in v if x in nodes}
+                if filtered:
+                    out[k] = filtered
+            else:
+                if v in nodes:
+                    out[k] = v
+        return out
 
     def _filter_map_set(src_map, nodes):
         if not src_map:
@@ -1000,9 +1085,13 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
     if len(kt_nodes) > 0:
             mClzKt = ClzRelationShips()
             mClzKt.set_var("root_dir", list(sRootDir)[0])
-            mClzKt.set_var("dict_classid_parentid", dict_classid_parentid)
-            mClzKt.set_var("dict_classid_interfaceid", dict_classid_interfaceid)
-            mClzKt.set_var("dict_classid_reliedclass", dict_classid_reliedclass)
+            # filter maps to only include kotlin nodes (owners and targets)
+            dict_classid_parentid_kt = _filter_map_single(dict_classid_parentid, kt_nodes)
+            dict_classid_interfaceid_kt = _filter_map_single(dict_classid_interfaceid, kt_nodes)
+            dict_classid_reliedclass_kt = _filter_map_set(dict_classid_reliedclass, kt_nodes)
+            mClzKt.set_var("dict_classid_parentid", dict_classid_parentid_kt)
+            mClzKt.set_var("dict_classid_interfaceid", dict_classid_interfaceid_kt)
+            mClzKt.set_var("dict_classid_reliedclass", dict_classid_reliedclass_kt)
             mClzKt.set_var("dict_classid_treenode", kt_nodes)
             mClzKt.set_var("set_classname", set([nd.get_classname() for nd in kt_nodes.values()]))
             mClzKt.set_var("key_class", key_class)
