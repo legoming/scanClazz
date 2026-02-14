@@ -15,7 +15,7 @@ def print_debug(str):
         logging.debug(str)
 
 class TreeNode:
-    def __init__(self, classname, file, ns=''):
+    def __init__(self, classname, file, ns='', origin=None):
         global gClassnameSet
         global gClassDefinedFileSet
         global gDic_Classname_File
@@ -36,6 +36,23 @@ class TreeNode:
         self.name = classname
         self.file = file # file with full path, which will be used to identify class' namespace ## nullable
         self.namespace = ns # packagename for java; namespace for c++
+        # origin indicates which language this node was created from: 'java','kotlin','cpp', or None
+        if origin is not None:
+            self.origin = origin
+        else:
+            lf = (self.file or '').lower()
+            if lf.endswith('.kt'):
+                self.origin = 'kotlin'
+            elif lf.endswith('.java'):
+                self.origin = 'java'
+            elif lf.endswith('.h') or lf.endswith('.cpp') or lf.endswith('.c'):
+                self.origin = 'cpp'
+            elif lf.startswith('included:java'):
+                self.origin = 'java'
+            elif lf.startswith('included:cpp'):
+                self.origin = 'cpp'
+            else:
+                self.origin = None
         # Keep separators ASCII to avoid missing glyphs in Graphviz renderers
         self.displayname = self.name.replace('<', '‹').replace('>', '›').replace('/', '_').replace(':','∶')
         self.displayid = self.id.replace('<', '‹').replace('>', '›').replace('/', '_').replace(':','∶')
