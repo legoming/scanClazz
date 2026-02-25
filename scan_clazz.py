@@ -273,11 +273,60 @@ def parse_kotlin_class(line):
     if matched is None:
         return '', []
     classname = matched.group(1).split('<')[0].strip()
+
+    def find_inheritance_colon(class_line):
+        depth_paren = 0
+        depth_angle = 0
+        depth_square = 0
+        for i, ch in enumerate(class_line):
+            if ch == '(':
+                depth_paren += 1
+            elif ch == ')' and depth_paren > 0:
+                depth_paren -= 1
+            elif ch == '<':
+                depth_angle += 1
+            elif ch == '>' and depth_angle > 0:
+                depth_angle -= 1
+            elif ch == '[':
+                depth_square += 1
+            elif ch == ']' and depth_square > 0:
+                depth_square -= 1
+            elif ch == ':' and depth_paren == 0 and depth_angle == 0 and depth_square == 0:
+                return i
+        return -1
+
+    def split_top_level_comma(parent_part):
+        tokens = []
+        depth_paren = 0
+        depth_angle = 0
+        depth_square = 0
+        seg_start = 0
+        for i, ch in enumerate(parent_part):
+            if ch == '(':
+                depth_paren += 1
+            elif ch == ')' and depth_paren > 0:
+                depth_paren -= 1
+            elif ch == '<':
+                depth_angle += 1
+            elif ch == '>' and depth_angle > 0:
+                depth_angle -= 1
+            elif ch == '[':
+                depth_square += 1
+            elif ch == ']' and depth_square > 0:
+                depth_square -= 1
+            elif ch == ',' and depth_paren == 0 and depth_angle == 0 and depth_square == 0:
+                tokens.append(parent_part[seg_start:i])
+                seg_start = i + 1
+        tokens.append(parent_part[seg_start:])
+        return tokens
+
     parents = []
-    if ':' in line:
-        parent_part = line.split(':', 1)[1]
+    split_idx = find_inheritance_colon(line)
+    if split_idx >= 0:
+        parent_part = line[split_idx + 1:]
         parent_part = parent_part.split('{', 1)[0]
-        for token in parent_part.split(','):
+        parent_part = re.split(r'\bwhere\b', parent_part, 1)[0]
+        for token in split_top_level_comma(parent_part):
             parent = token.strip()
             if len(parent) < 1:
                 continue
