@@ -2,7 +2,7 @@
 
 If local graphviz has installed, and script is launched with python3; then graph png will be generated automatically with local installed graphviz dot/fdp engine.
 
-The generated png will be under `~/Downloads/`, named as `[lang]graph-dot.png` and `[lang]graph-fdp.png`, [lang] can be 'java' or 'cpp'. 
+The generated png will be under `~/Downloads/`, named as `[lang]graph-dot.png` and `[lang]graph-fdp.png`, [lang] can be 'java', 'kotlin' or 'cpp'. 
 
 ## generate class relationship for graphviz
 
@@ -35,6 +35,7 @@ Usage: python scan_clazz.py -p dir_to_scan [options]
 
 Feature Support:
     support multiple -p in 1.0+
+    support Java / Kotlin / C++ parsing
 ```
 
 ### sample

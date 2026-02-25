@@ -49,6 +49,9 @@ PATTERN_CLASS_WITH_PARENT__CPP = KEYWORD_CLASS + SPLIT_SPACE + \
 PATTERN_CLASS_DEFINE__CPP = KEYWORD_CLASS + SPLIT_SPACE + \
                             PATTERN_CLASS_NAME + r'\ *\n*\ *{'
 
+PATTERN_CLASS_WITH_PARENT__KOTLIN = r'^(public\ +|private\ +|protected\ +|internal\ +)?(open\ +|abstract\ +|sealed\ +|data\ +)?class\ +[0-9a-zA-Z_\.]+[^\n{]*\:[^\n{]+'
+PATTERN_CLASS_DEFINE__KOTLIN = r'^(public\ +|private\ +|protected\ +|internal\ +)?(open\ +|abstract\ +|sealed\ +|data\ +)?class\ +[0-9a-zA-Z_\.]+'
+
 CLASS_EXCLUDED_ALWAYS = [
     r'ByteArray',
     r'Activity',
@@ -242,6 +245,48 @@ def guessHeaderFromClassName(clz, includedHeaderSet):
                 break # current we match 1st one, but not best one
     return hdfile
 
+
+def upsert_treenode(classname, filepath, namespace, treenode_dict, classname_set, key_class, key_class_id):
+    nd = TreeNode(classname, filepath, namespace)
+    class_id = nd.get_id()
+    if class_id not in treenode_dict:
+        treenode_dict[class_id] = nd
+        classname_set.add(classname)
+    return class_id if classname == key_class else key_class_id, class_id
+
+
+def cleanup_parent_name(parentname):
+    p = parentname.strip()
+    try:
+        p = p[:p.index(r' ')]
+    except:
+        pass
+    try:
+        p = p[:p.index(r'{')]
+    except:
+        pass
+    return p.strip()
+
+
+def parse_kotlin_class(line):
+    matched = re.search(r'class\ +([0-9a-zA-Z_\.]+)', line)
+    if matched is None:
+        return '', []
+    classname = matched.group(1).split('<')[0].strip()
+    parents = []
+    if ':' in line:
+        parent_part = line.split(':', 1)[1]
+        parent_part = parent_part.split('{', 1)[0]
+        for token in parent_part.split(','):
+            parent = token.strip()
+            if len(parent) < 1:
+                continue
+            parent = parent.split('(')[0].strip()
+            parent = parent.split('<')[0].strip()
+            if len(parent) > 0:
+                parents.append(parent)
+    return classname, parents
+
 def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, excluded_class, key_class, depth):
     dict_filename_classid = {}
     dict_classid_parentid = {}
@@ -258,6 +303,12 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
 
     dict_classid_treenode = {}
     dict_classid_treenode__cpp = {}
+    dict_classid_treenode__kotlin = {}
+
+    dict_filename_classid__kotlin = {}
+    dict_classid_parentid__kotlin = {}
+    set_classname__kotlin = set()
+    dict_classid_reliedclass__kotlin = {}
 
     dict_classid_filename__cpp = {}
 
@@ -286,7 +337,7 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
                 print('scanning \t' + filename)
                 if filename.find('.java') > 0:
                     filepath = os.path.join(root, filename)
-                    f = open(filepath, 'r')
+                    f = open(filepath, 'r', encoding='utf-8', errors='ignore')
                     currentPkg = ''
                     importedPkgSet = set()
                     for line in f:
@@ -319,22 +370,16 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
                                     parentpkgname = getBestPackageName(parentname, importedPkgSet, currentPkg)
                                     should_link = True
                                     if len(classname) > 0 and fliter_clz(classname,excluded_class):
-                                        nd = TreeNode(classname, filepath, currentPkg)
-                                        line_classid = nd.get_id()
-                                        if line_classid not in dict_classid_treenode.keys():
-                                            dict_classid_treenode[line_classid] = nd
-                                            set_classname.add(classname)
-                                            key_class_id = line_classid if classname == key_class else key_class_id
+                                        key_class_id, line_classid = upsert_treenode(classname, filepath, currentPkg,
+                                                                                    dict_classid_treenode, set_classname,
+                                                                                    key_class, key_class_id)
                                         dict_filename_classid[filename] = line_classid
                                     else:
                                         should_link = False
                                     if mode.find('c') >= 0 and len(parentname) > 0 and fliter_clz(parentname,excluded_class):
-                                        nd = TreeNode(parentname, '', parentpkgname[0])
-                                        line_parentid = nd.get_id()
-                                        if line_parentid not in dict_classid_treenode.keys():
-                                            dict_classid_treenode[line_parentid] = nd
-                                            set_classname.add(parentname)
-                                            key_class_id = line_parentid if parentname == key_class else key_class_id
+                                        key_class_id, line_parentid = upsert_treenode(parentname, '', parentpkgname[0],
+                                                                                      dict_classid_treenode, set_classname,
+                                                                                      key_class, key_class_id)
                                     else:
                                         should_link = False
                                     if should_link:
@@ -362,12 +407,9 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
                                     classname = classname.strip()
                                     should_link = True
                                     if len(classname) > 0 and fliter_clz(classname,excluded_class):
-                                        nd = TreeNode(classname, filepath, currentPkg)
-                                        line_classid = nd.get_id()
-                                        if line_classid not in dict_classid_treenode.keys():
-                                            dict_classid_treenode[line_classid] = nd
-                                            set_classname.add(classname)
-                                            key_class_id = line_classid if classname == key_class else key_class_id
+                                        key_class_id, line_classid = upsert_treenode(classname, filepath, currentPkg,
+                                                                                    dict_classid_treenode, set_classname,
+                                                                                    key_class, key_class_id)
                                         dict_filename_classid[filename] = line_classid
                                     else:
                                         should_link = False
@@ -376,12 +418,9 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
                                         interface = interface.strip()
                                         interfacepkgname = getBestPackageName(interface, importedPkgSet, currentPkg)
                                         if mode.find('i') >= 0 and fliter_clz(interface,excluded_class):
-                                            nd = TreeNode(interface, '', interfacepkgname[0])
-                                            line_interfaceid = nd.get_id()
-                                            if line_interfaceid not in dict_classid_treenode.keys():
-                                                dict_classid_treenode[line_interfaceid] = nd
-                                                set_classname.add(interface)
-                                                key_class_id = line_interfaceid if interface == key_class else key_class_id
+                                            key_class_id, line_interfaceid = upsert_treenode(interface, '', interfacepkgname[0],
+                                                                                            dict_classid_treenode, set_classname,
+                                                                                            key_class, key_class_id)
                                         else:
                                             should_link = False
                                         if should_link:
@@ -401,16 +440,58 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
                             except Exception as e:
                                 print('PATTERN_CLASS_DEFINE except\n\t' + str(e))
                             if len(classname) > 0 and fliter_clz(classname,excluded_class):
-                                nd = TreeNode(classname, filepath, currentPkg)
-                                line_classid = nd.get_id()
+                                key_class_id, line_classid = upsert_treenode(classname, filepath, currentPkg,
+                                                                            dict_classid_treenode, set_classname,
+                                                                            key_class, key_class_id)
                                 list_classid_def.append(line_classid)
                                 dict_filename_classid[filename] = line_classid
-                                if line_classid not in dict_classid_treenode.keys():
-                                    dict_classid_treenode[line_classid] = nd
-                                    set_classname.add(classname)
-                                    key_class_id = line_classid if classname == key_class else key_class_id
                             break
                     f.close()
+                elif filename.endswith('.kt'):
+                    filepath = os.path.join(root, filename)
+                    with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+                        currentPkg = ''
+                        importedPkgSet = set()
+                        for line in f:
+                            line_strip = line.strip()
+                            if line_strip.startswith('package'):
+                                currentPkg = line_strip.replace(r'package', '').strip()
+                                continue
+                            if line_strip.startswith('import'):
+                                importedPkgSet.add(line_strip.replace(r'import', '').strip())
+                                continue
+                            if line_strip.startswith(r'/') or line_strip.startswith(r'*'):
+                                continue
+                            if re.match(PATTERN_CLASS_WITH_PARENT__KOTLIN, line_strip):
+                                classname, parents = parse_kotlin_class(line_strip)
+                                if len(classname) < 1 or not fliter_clz(classname, excluded_class):
+                                    continue
+                                key_class_id, line_classid = upsert_treenode(classname, filepath, currentPkg,
+                                                                            dict_classid_treenode__kotlin,
+                                                                            set_classname__kotlin,
+                                                                            key_class, key_class_id)
+                                dict_filename_classid__kotlin[filename] = line_classid
+                                for parent in parents:
+                                    parentname = cleanup_parent_name(parent)
+                                    parentpkgname = getBestPackageName(parentname, importedPkgSet, currentPkg)
+                                    should_link = mode.find('c') >= 0 and len(parentname) > 0 and fliter_clz(parentname, excluded_class)
+                                    if not should_link:
+                                        continue
+                                    key_class_id, line_parentid = upsert_treenode(parentname, '', parentpkgname[0],
+                                                                                  dict_classid_treenode__kotlin,
+                                                                                  set_classname__kotlin,
+                                                                                  key_class, key_class_id)
+                                    dict_classid_parentid__kotlin[line_classid] = line_parentid
+                                    dict_classid_treenode__kotlin.get(line_classid).add_parent(line_parentid)
+                                    dict_classid_treenode__kotlin.get(line_parentid).add_child(line_classid)
+                            elif re.match(PATTERN_CLASS_DEFINE__KOTLIN, line_strip):
+                                classname, _ = parse_kotlin_class(line_strip)
+                                if len(classname) > 0 and fliter_clz(classname, excluded_class):
+                                    key_class_id, line_classid = upsert_treenode(classname, filepath, currentPkg,
+                                                                                dict_classid_treenode__kotlin,
+                                                                                set_classname__kotlin,
+                                                                                key_class, key_class_id)
+                                    dict_filename_classid__kotlin[filename] = line_classid
                 elif filename.endswith('.h') > 0:
                     filepath = os.path.join(root, filename)
                     f = open(filepath, 'r', encoding="utf-8")
@@ -524,54 +605,67 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
     print('-'*10 + '\tjava\t' + '-'*10)
     for filename in dict_filename_classid:
         print(filename + ' : ' + dict_filename_classid[filename])
+    print('-'*10 + '\tkotlin\t' + '-'*10)
+    for filename in dict_filename_classid__kotlin:
+        print(filename + ' : ' + dict_filename_classid__kotlin[filename])
     print('-'*10 + '\tc++\t' + '-'*10)
     for filename in dict_filename_classid__cpp:
         print(filename + ' : ' + dict_filename_classid__cpp[filename])
     print('='*10 + '\tmapping of filename - class id end\t' + '='*10)
-    if (len(dict_classid_treenode) > 0 or len(dict_classid_treenode__cpp) > 0) and mode.find('r') >= 0:
+    if (len(dict_classid_treenode) > 0 or len(dict_classid_treenode__kotlin) > 0 or len(dict_classid_treenode__cpp) > 0) and mode.find('r') >= 0:
         for root_dir in sRootDir:
             for root, subdirs, files in os.walk(root_dir):
                 print('tree \t' + str(files))
                 for filename in files:
-                    if filename.find('.java') > 0:
+                    if filename.find('.java') > 0 or filename.endswith('.kt'):
                         filepath = os.path.join(root, filename)
                         print('parsing class relationship in \t' + filepath)
-                        f = open(filepath, 'r')
+                        f = open(filepath, 'r', encoding='utf-8', errors='ignore')
                         buff = f.read()
-                        buff = re.sub(PATTERN_CLASS_DEFINE + '.*\n?', '', buff)
-                        buff = re.sub(PATTERN_CLASS_WITH_PARENT + '.*\n?', '', buff)
-                        buff = re.sub(PATTERN_CLASS_IMPLEMENT_INTERFACE + '.*\n?', '', buff)
+                        if filename.endswith('.kt'):
+                            buff = re.sub(PATTERN_CLASS_DEFINE__KOTLIN + '.*\n?', '', buff)
+                            buff = re.sub(PATTERN_CLASS_WITH_PARENT__KOTLIN + '.*\n?', '', buff)
+                        else:
+                            buff = re.sub(PATTERN_CLASS_DEFINE + '.*\n?', '', buff)
+                            buff = re.sub(PATTERN_CLASS_WITH_PARENT + '.*\n?', '', buff)
+                            buff = re.sub(PATTERN_CLASS_IMPLEMENT_INTERFACE + '.*\n?', '', buff)
                         buff = re.sub(r'import ' + '.*\n?', '', buff)
                         f.close()
                         set_reliedclassid = set()
 
-                        fclassid = dict_filename_classid.get(filename)
+                        dict_filename = dict_filename_classid__kotlin if filename.endswith('.kt') else dict_filename_classid
+                        dict_treenode = dict_classid_treenode__kotlin if filename.endswith('.kt') else dict_classid_treenode
+                        dict_reliedclass = dict_classid_reliedclass__kotlin if filename.endswith('.kt') else dict_classid_reliedclass
+
+                        fclassid = dict_filename.get(filename)
 
                         if fclassid is None:
                             print('skip due to no class defined in ' + filename)
                             continue
 
-                        if fclassid not in dict_classid_treenode:
+                        if fclassid not in dict_treenode:
                             print('should not happen [' + filename + ' [' + fclassid)
                             # nd = TreeNode(fclassid, filepath)
                             # dict_classid_treenode[fclassid] = nd
                             # key_class_id = line_classid if classname == key_class else key_class_id
                             # set_classname.add(nd.get_classname())
-                        nd_fclassid = dict_classid_treenode.get(fclassid)
+                        nd_fclassid = dict_treenode.get(fclassid)
 
-                        for clzid in dict_classid_treenode:
-                            clz = dict_classid_treenode.get(clzid).get_classname()
+                        for clzid in dict_treenode:
+                            clz = dict_treenode.get(clzid).get_classname()
                             pat = r"\ " + clz + r"\.|new\ " + clz + r"|\"[a-zA-Z]+\." + clz + r"\"" + r"|"+ clz + "\ +[a-zA-Z_]+\ +=" + r"|" + clz + r"\.class"
+                            if filename.endswith('.kt'):
+                                pat += r'|' + clz + r'::class|\:\ *' + clz + r'\b|\b' + clz + r'\('
                             #print('debug : ' + pat)
                             # \ Intent\.|new Intent
                             if re.search(pat, buff):
                                 set_reliedclassid.add(clzid)
                                 # clz's node has created already
-                                nd_clz = dict_classid_treenode.get(clzid)
+                                nd_clz = dict_treenode.get(clzid)
                                 print('\t find relied class ' + nd_clz.get_classname())
                                 nd_clz.add_lchild(fclassid)
                                 nd_fclassid.add_rchild(clzid)
-                        dict_classid_reliedclass[fclassid] = set_reliedclassid
+                        dict_reliedclass[fclassid] = set_reliedclassid
                         if len(set_reliedclassid) < 1:
                             print('\t no relied class')
                     elif filename.endswith('.h'):
@@ -689,6 +783,13 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
     mClzRelationShips.set_var("depth", depth)
     mClzRelationShips.set_var("lang", "java")
     if len(dict_classid_treenode) > 0:
+        draw_class_relationship(mClzRelationShips)
+    if len(dict_classid_treenode__kotlin) > 0:
+        mClzRelationShips.set_var("dict_classid_parentid", dict_classid_parentid__kotlin)
+        mClzRelationShips.set_var("dict_classid_reliedclass", dict_classid_reliedclass__kotlin)
+        mClzRelationShips.set_var("dict_classid_treenode", dict_classid_treenode__kotlin)
+        mClzRelationShips.set_var("set_classname", set_classname__kotlin)
+        mClzRelationShips.set_var("lang", "kotlin")
         draw_class_relationship(mClzRelationShips)
     if len(dict_classid_treenode__cpp) > 0:
         mClzRelationShips.set_var("dict_classid_parentid", dict_classid_parentid__cpp)
