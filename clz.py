@@ -20,6 +20,9 @@ class ClzRelationShips:
         self.argvs = {}
 
     def set_var(self, arg_type, arg_value):
+        if arg_type in ('key_class', 'key_class_id') and arg_value is None:
+            self.argvs[arg_type] = arg_value
+            return
         if arg_type in DicArgvTypes.keys() and str(type(arg_value)) == DicArgvTypes.get(arg_type):
             self.argvs[arg_type] = arg_value
         else:
@@ -34,5 +37,4 @@ class ClzRelationShips:
             import logging
             logging.error('ClzRelationShips error: %s cannot be found in argvs', arg_type)
             return None
-
 

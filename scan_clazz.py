@@ -54,6 +54,9 @@ PATTERN_CLASS_WITH_PARENT__CPP = KEYWORD_CLASS + SPLIT_SPACE + \
 PATTERN_CLASS_DEFINE__CPP = KEYWORD_CLASS + SPLIT_SPACE + \
                             PATTERN_CLASS_NAME + r'\ *\n*\ *{'
 
+PATTERN_CLASS_WITH_PARENT__KOTLIN = r'^(public\ +|private\ +|protected\ +|internal\ +)?(open\ +|abstract\ +|sealed\ +|data\ +)?class\ +[0-9a-zA-Z_\.]+[^\n{]*\:[^\n{]+'
+PATTERN_CLASS_DEFINE__KOTLIN = r'^(public\ +|private\ +|protected\ +|internal\ +)?(open\ +|abstract\ +|sealed\ +|data\ +)?class\ +[0-9a-zA-Z_\.]+'
+
 CLASS_EXCLUDED_ALWAYS = [
     r'ByteArray',
     r'Activity',
@@ -344,6 +347,97 @@ def guessHeaderFromClassName(clz, includedHeaderSet):
                 break # current we match 1st one, but not best one
     return hdfile
 
+
+def upsert_treenode(classname, filepath, namespace, treenode_dict, classname_set, key_class, key_class_id):
+    nd = TreeNode(classname, filepath, namespace)
+    class_id = nd.get_id()
+    if class_id not in treenode_dict:
+        treenode_dict[class_id] = nd
+        classname_set.add(classname)
+    return class_id if classname == key_class else key_class_id, class_id
+
+
+def cleanup_parent_name(parentname):
+    p = parentname.strip()
+    try:
+        p = p[:p.index(r' ')]
+    except:
+        pass
+    try:
+        p = p[:p.index(r'{')]
+    except:
+        pass
+    return p.strip()
+
+
+def parse_kotlin_class(line):
+    matched = re.search(r'class\ +([0-9a-zA-Z_\.]+)', line)
+    if matched is None:
+        return '', []
+    classname = matched.group(1).split('<')[0].strip()
+
+    def find_inheritance_colon(class_line):
+        depth_paren = 0
+        depth_angle = 0
+        depth_square = 0
+        for i, ch in enumerate(class_line):
+            if ch == '(':
+                depth_paren += 1
+            elif ch == ')' and depth_paren > 0:
+                depth_paren -= 1
+            elif ch == '<':
+                depth_angle += 1
+            elif ch == '>' and depth_angle > 0:
+                depth_angle -= 1
+            elif ch == '[':
+                depth_square += 1
+            elif ch == ']' and depth_square > 0:
+                depth_square -= 1
+            elif ch == ':' and depth_paren == 0 and depth_angle == 0 and depth_square == 0:
+                return i
+        return -1
+
+    def split_top_level_comma(parent_part):
+        tokens = []
+        depth_paren = 0
+        depth_angle = 0
+        depth_square = 0
+        seg_start = 0
+        for i, ch in enumerate(parent_part):
+            if ch == '(':
+                depth_paren += 1
+            elif ch == ')' and depth_paren > 0:
+                depth_paren -= 1
+            elif ch == '<':
+                depth_angle += 1
+            elif ch == '>' and depth_angle > 0:
+                depth_angle -= 1
+            elif ch == '[':
+                depth_square += 1
+            elif ch == ']' and depth_square > 0:
+                depth_square -= 1
+            elif ch == ',' and depth_paren == 0 and depth_angle == 0 and depth_square == 0:
+                tokens.append(parent_part[seg_start:i])
+                seg_start = i + 1
+        tokens.append(parent_part[seg_start:])
+        return tokens
+
+    parents = []
+    split_idx = find_inheritance_colon(line)
+    if split_idx >= 0:
+        parent_part = line[split_idx + 1:]
+        parent_part = parent_part.split('{', 1)[0]
+        parent_part = re.split(r'\bwhere\b', parent_part, 1)[0]
+        for token in split_top_level_comma(parent_part):
+            parent = token.strip()
+            if len(parent) < 1:
+                continue
+            parent = parent.split('(')[0].strip()
+            parent = parent.split('<')[0].strip()
+            if len(parent) > 0:
+                parents.append(parent)
+    return classname, parents
+
 def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, excluded_class, key_class, depth):
     dict_filename_classid = {}
     dict_classid_parentid = {}
@@ -360,6 +454,12 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
 
     dict_classid_treenode = {}
     dict_classid_treenode__cpp = {}
+    dict_classid_treenode__kotlin = {}
+
+    dict_filename_classid__kotlin = {}
+    dict_classid_parentid__kotlin = {}
+    set_classname__kotlin = set()
+    dict_classid_reliedclass__kotlin = {}
 
     dict_classid_filename__cpp = {}
 
@@ -866,7 +966,11 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
                         buff = re.sub(r'import ' + '.*\n?', '', buff)
                         set_reliedclassid = set()
 
-                        fclassid = dict_filename_classid.get(filename)
+                        dict_filename = dict_filename_classid__kotlin if filename.endswith('.kt') else dict_filename_classid
+                        dict_treenode = dict_classid_treenode__kotlin if filename.endswith('.kt') else dict_classid_treenode
+                        dict_reliedclass = dict_classid_reliedclass__kotlin if filename.endswith('.kt') else dict_classid_reliedclass
+
+                        fclassid = dict_filename.get(filename)
 
                         if fclassid is None:
                             logging.debug('skip due to no class defined in %s', filename)
@@ -878,7 +982,7 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
                             # dict_classid_treenode[fclassid] = nd
                             # key_class_id = line_classid if classname == key_class else key_class_id
                             # set_classname.add(nd.get_classname())
-                        nd_fclassid = dict_classid_treenode.get(fclassid)
+                        nd_fclassid = dict_treenode.get(fclassid)
 
                         for clzid, nd_clz in dict_classid_treenode.items():
                             cre = java_re_map.get(clzid)
@@ -888,7 +992,7 @@ def scan_class_define(sRootDir, mode, included_java_class, included_cpp_class, e
                                 logging.info('\t find relied class %s', nd_clz.get_classname())
                                 nd_clz.add_lchild(fclassid)
                                 nd_fclassid.add_rchild(clzid)
-                        dict_classid_reliedclass[fclassid] = set_reliedclassid
+                        dict_reliedclass[fclassid] = set_reliedclassid
                         if len(set_reliedclassid) < 1:
                             logging.debug('\t no relied class')
                     elif filename.endswith('.h'):
