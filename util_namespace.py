@@ -23,16 +23,19 @@ class NameSpaceUtil(object):
             except:
                 pass
             ns = ns.replace(r'namespace ', r'').strip()
-            print('push namespace ' + ns + ' from \t\t' + str(data))
+            import logging
+            logging.debug('push namespace %s from \t\t%s', ns, data)
             self.stack.append(ns)
         elif tmp.find(r'{') >= 0:
-            print('push {')
+            import logging
+            logging.debug('push {')
             self.stack.append(r'{')
         if tmp.find(r'}') >= 0:
             if len(self.stack) > 0:
                 # print('pop ' + self.stack[-1])
                 # print('pop before ' + str(self.stack))
-                print('pop ' + self.stack[-1])
+                import logging
+                logging.debug('pop %s', self.stack[-1])
                 self.stack.pop()
 
     def getNamespace(self):
@@ -54,7 +57,8 @@ class NameSpaceUtil(object):
                 else:
                     ns = self.stack[i] + '::' + ns
         #ns.replace(r'::', r'_')
-        print('get namespace ' + ns)
+        import logging
+        logging.debug('get namespace %s', ns)
         return ns
 
     def gettop(self):

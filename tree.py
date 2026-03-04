@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 
+import logging
+
 debug = False
 
 gClassnameSet = set()
@@ -10,10 +12,10 @@ gDic_File_ClassnameSet = {} # 1 file can define several classes
 
 def print_debug(str):
     if debug:
-        print(str)
+        logging.debug(str)
 
 class TreeNode:
-    def __init__(self, classname, file, ns=''):
+    def __init__(self, classname, file, ns='', origin=None):
         global gClassnameSet
         global gClassDefinedFileSet
         global gDic_Classname_File
@@ -24,7 +26,7 @@ class TreeNode:
             self.id = ns + '::' + classname # class name with package / namespace
         else:
             self.id = classname
-        print('[' + classname + '] defined in [' + file + '] \'s id = [' + self.id + ']')
+        logging.debug('[%s] defined in [%s] \'s id = [%s]', classname, file, self.id)
         self.parent = None # class name
         self.interfaces = set() # parent interface of the implemented child class ## class id
         self.implements = set() # implement child class of interface ## class id
@@ -34,9 +36,27 @@ class TreeNode:
         self.name = classname
         self.file = file # file with full path, which will be used to identify class' namespace ## nullable
         self.namespace = ns # packagename for java; namespace for c++
-        self.displayname = self.name.replace('.', '・').replace('<', '‹').replace('>', '›').replace('/', '_').replace(':','∶')
-        self.displayid = self.id.replace('.', '・').replace('<', '‹').replace('>', '›').replace('/', '_').replace(':','∶')
-        self.displayns = self.namespace.replace('.', '・').replace('<', '‹').replace('>', '›').replace('/', '_').replace(':','∶')
+        # origin indicates which language this node was created from: 'java','kotlin','cpp', or None
+        if origin is not None:
+            self.origin = origin
+        else:
+            lf = (self.file or '').lower()
+            if lf.endswith('.kt'):
+                self.origin = 'kotlin'
+            elif lf.endswith('.java'):
+                self.origin = 'java'
+            elif lf.endswith('.h') or lf.endswith('.cpp') or lf.endswith('.c'):
+                self.origin = 'cpp'
+            elif lf.startswith('included:java'):
+                self.origin = 'java'
+            elif lf.startswith('included:cpp'):
+                self.origin = 'cpp'
+            else:
+                self.origin = None
+        # Keep separators ASCII to avoid missing glyphs in Graphviz renderers
+        self.displayname = self.name.replace('<', '‹').replace('>', '›').replace('/', '_').replace(':','∶')
+        self.displayid = self.id.replace('<', '‹').replace('>', '›').replace('/', '_').replace(':','∶')
+        self.displayns = self.namespace.replace('<', '‹').replace('>', '›').replace('/', '_').replace(':','∶')
         ### disable namespace for cpp
         if not file.endswith(r'.java'):
             self.displayid = self.displayname
@@ -63,17 +83,17 @@ class TreeNode:
         #     gDic_File_ClassnameSet[self.file] = sName
 
     def dumpself(self):
-        print('-'*20)
-        print(self.id)
-        print(self.name)
-        print(self.namespace)
-        print(self.file)
-        print(self.parent)
-        print(self.childs)
-        print(self.displayid)
-        print(self.displayname)
-        print(self.displayns)
-        print('-'*20)
+        logging.debug('-'*20)
+        logging.debug(self.id)
+        logging.debug(self.name)
+        logging.debug(self.namespace)
+        logging.debug(self.file)
+        logging.debug(self.parent)
+        logging.debug(self.childs)
+        logging.debug(self.displayid)
+        logging.debug(self.displayname)
+        logging.debug(self.displayns)
+        logging.debug('-'*20)
 
     def is_valid_node(self):
         return True if self.name is not None and len(self.name) > 0 else False
@@ -205,13 +225,13 @@ def dump(dict_classid_treenode):
     if dict_classid_treenode is not None and len(dict_classid_treenode) > 0:
         for clz in dict_classid_treenode:
             nd = dict_classid_treenode.get(clz)
-            print(nd.name)
+            logging.debug(nd.name)
             if nd.parent is not None:
-                print('\t parent = ' + nd.parent)
+                logging.debug('\t parent = %s', nd.parent)
             else:
-                print('\t parent = none')
-            print('\t childs = ' + str(nd.childs))
-            print('\t relied by ' + str(nd.lchild))
-            print('\t relied on ' + str(nd.rchild))
+                logging.debug('\t parent = none')
+            logging.debug('\t childs = %s', str(nd.childs))
+            logging.debug('\t relied by %s', str(nd.lchild))
+            logging.debug('\t relied on %s', str(nd.rchild))
 
 
